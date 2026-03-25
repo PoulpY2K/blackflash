@@ -45,12 +45,6 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.pullrequest.key=${{ github.event.pull_request.number }} -Dsonar.qualitygate.wait=true
 
-      - name: Sonar Scan Project
-        uses: SonarSource/sonarqube-scan-action@v7.0.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
   dependency-submission:
     runs-on: ubuntu-latest
     permissions:
