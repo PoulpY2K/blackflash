@@ -49,6 +49,8 @@
         <sonar.sources>pom.xml,src/main</sonar.sources>
         <sonar.dynamicAnalysis>reuseReports</sonar.dynamicAnalysis>
         <sonar.java.coveragePlugin>jacoco</sonar.java.coveragePlugin>
+        <sonar.organization>poulp2k</sonar.organization>
+        <sonar.projectKey>poulpy2k_blackflash</sonar.projectKey>
 
         <!-- Plugins -->
         <jacoco-maven-plugin.version>0.8.14</jacoco-maven-plugin.version>
