@@ -59,7 +59,7 @@
 
         <!-- Dependencies -->
         <mapstruct.version>1.6.3</mapstruct.version>
-        <commons-lang3.version>3.19.0</commons-lang3.version>
+        <commons-lang3.version>3.20.0</commons-lang3.version>
         <openapi-generator-maven-plugin.version>7.21.0</openapi-generator-maven-plugin.version>
     </properties>
 
