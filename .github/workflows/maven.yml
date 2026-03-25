@@ -42,7 +42,7 @@ jobs:
       - name: Build, test and generate reports with Maven
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn clean verify sonar:sonar
+        run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.organization=poulp2k -Dsonar.projectKey=poulpy2k_blackflash
 
   dependency-submission:
     runs-on: ubuntu-latest
