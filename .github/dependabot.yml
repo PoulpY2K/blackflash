@@ -15,7 +15,7 @@ updates:
       all-actions:
         patterns: [ "*" ]
   - package-ecosystem: "maven"
-    directory: "/maven/lib/dependabot/maven/"
+    directory: "/"
     schedule:
       interval: "weekly"
       day: "sunday"
