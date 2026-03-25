@@ -264,29 +264,29 @@
                         </additionalModelTypeAnnotations>
                     </configOptions>
                 </configuration>
-                <executions>
-                    <execution>
-                        <id>generate-rest-api</id>
-                        <goals>
-                            <goal>generate</goal>
-                        </goals>
-                        <configuration>
-                            <inputSpec>${project.basedir}/src/main/resources/api-spec/blackflash-api.yaml</inputSpec>
-                            <mergedFileName>blackflash.openapi.yaml</mergedFileName>
+<!--                <executions>-->
+<!--                    <execution>-->
+<!--                        <id>generate-rest-api</id>-->
+<!--                        <goals>-->
+<!--                            <goal>generate</goal>-->
+<!--                        </goals>-->
+<!--                        <configuration>-->
+<!--                            <inputSpec>${project.basedir}/src/main/resources/api-spec/blackflash-api.yaml</inputSpec>-->
+<!--                            <mergedFileName>blackflash.openapi.yaml</mergedFileName>-->
 
-                            <apiPackage>${java.code.base-package}.api.controllers</apiPackage>
-                            <modelPackage>${java.code.base-package}.api.dtos</modelPackage>
+<!--                            <apiPackage>${java.code.base-package}.api.controllers</apiPackage>-->
+<!--                            <modelPackage>${java.code.base-package}.api.dtos</modelPackage>-->
 
-                            <generatorName>spring</generatorName>
-                            <library>spring-boot</library>
+<!--                            <generatorName>spring</generatorName>-->
+<!--                            <library>spring-boot</library>-->
 
-                            <configOptions>
-                                <documentationProvider>springdoc</documentationProvider>
-                                <useBeanValidation>true</useBeanValidation>
-                            </configOptions>
-                        </configuration>
-                    </execution>
-                </executions>
+<!--                            <configOptions>-->
+<!--                                <documentationProvider>springdoc</documentationProvider>-->
+<!--                                <useBeanValidation>true</useBeanValidation>-->
+<!--                            </configOptions>-->
+<!--                        </configuration>-->
+<!--                    </execution>-->
+<!--                </executions>-->
             </plugin>
 
             <plugin>
