@@ -1,0 +1,7 @@
+---
+openapi: 3.1.1
+info:
+  title: Blackflash API
+  description: Blackflash Discord music bot
+  version: 0.0.1
+paths:
