@@ -61,7 +61,16 @@
         <mapstruct.version>1.6.3</mapstruct.version>
         <commons-lang3.version>3.20.0</commons-lang3.version>
         <openapi-generator-maven-plugin.version>7.21.0</openapi-generator-maven-plugin.version>
+        <jda.version>6.4.0</jda.version>
+        <lavaplayer.version>2.2.6</lavaplayer.version>
     </properties>
+
+    <repositories>
+        <repository>
+            <id>jitpack</id>
+            <url>https://jitpack.io</url>
+        </repository>
+    </repositories>
 
     <dependencies>
         <!-- SPRING BOOT -->
@@ -105,6 +114,16 @@
         </dependency>
 
         <!-- OTHER DEPENDENCIES-->
+        <dependency>
+            <groupId>dev.arbjerg</groupId>
+            <artifactId>lavaplayer</artifactId>
+            <version>${lavaplayer.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>net.dv8tion</groupId>
+            <artifactId>JDA</artifactId>
+            <version>${jda.version}</version> <!-- replace $version with the latest version -->
+        </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
@@ -227,7 +246,6 @@
                 <configuration>
                     <argLine>
                         @{argLine} -Dfile.encoding=${project.build.sourceEncoding}
-                        -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar
                     </argLine>
                 </configuration>
             </plugin>
@@ -266,29 +284,31 @@
                         </additionalModelTypeAnnotations>
                     </configOptions>
                 </configuration>
-<!--                <executions>-->
-<!--                    <execution>-->
-<!--                        <id>generate-rest-api</id>-->
-<!--                        <goals>-->
-<!--                            <goal>generate</goal>-->
-<!--                        </goals>-->
-<!--                        <configuration>-->
-<!--                            <inputSpec>${project.basedir}/src/main/resources/api-spec/blackflash-api.yaml</inputSpec>-->
-<!--                            <mergedFileName>blackflash.openapi.yaml</mergedFileName>-->
+                <executions>
+                    <execution>
+                        <id>generate-rest-api</id>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <configuration>
+                            <!-- Skip for now since we don't have an API implemented -->
+                            <skip>true</skip>
+                            <inputSpec>${project.basedir}/src/main/resources/api-spec/blackflash-api.yaml</inputSpec>
+                            <mergedFileName>blackflash.openapi.yaml</mergedFileName>
 
-<!--                            <apiPackage>${java.code.base-package}.api.controllers</apiPackage>-->
-<!--                            <modelPackage>${java.code.base-package}.api.dtos</modelPackage>-->
+                            <apiPackage>${java.code.base-package}.api.controllers</apiPackage>
+                            <modelPackage>${java.code.base-package}.api.dtos</modelPackage>
 
-<!--                            <generatorName>spring</generatorName>-->
-<!--                            <library>spring-boot</library>-->
+                            <generatorName>spring</generatorName>
+                            <library>spring-boot</library>
 
-<!--                            <configOptions>-->
-<!--                                <documentationProvider>springdoc</documentationProvider>-->
-<!--                                <useBeanValidation>true</useBeanValidation>-->
-<!--                            </configOptions>-->
-<!--                        </configuration>-->
-<!--                    </execution>-->
-<!--                </executions>-->
+                            <configOptions>
+                                <documentationProvider>springdoc</documentationProvider>
+                                <useBeanValidation>true</useBeanValidation>
+                            </configOptions>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
 
             <plugin>

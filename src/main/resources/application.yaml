@@ -6,6 +6,10 @@ info.app:
   description: "@project.description@"
   locale: Europe/Paris
 
+discord:
+    token: ${DISCORD_TOKEN:none}
+    activity: "v${info.app.artifactVersion} | /help"
+
 # Spring
 spring:
   application:
@@ -28,7 +32,7 @@ management:
       export:
         enabled: on
         user-name: elastic
-        password: ${ELASTIC_PASSWORD}
+        password: ${ELASTIC_PASSWORD:none}
   server:
     port: 8080
   health:
