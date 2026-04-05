@@ -1,4 +1,4 @@
-package fr.fumbus.blackflash.discord.lavaplayer;
+package fr.fumbus.blackflash.discord.lavalink;
 
 import dev.arbjerg.lavalink.client.event.TrackEndEvent;
 import dev.arbjerg.lavalink.client.event.TrackStartEvent;

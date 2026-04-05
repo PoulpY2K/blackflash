@@ -3,7 +3,7 @@ package fr.fumbus.blackflash.discord.jda.slash;
 import dev.arbjerg.lavalink.client.LavalinkClient;
 import dev.arbjerg.lavalink.client.event.TrackEndEvent;
 import dev.arbjerg.lavalink.client.event.TrackStartEvent;
-import fr.fumbus.blackflash.discord.lavaplayer.GuildMusicManager;
+import fr.fumbus.blackflash.discord.lavalink.GuildMusicManager;
 import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

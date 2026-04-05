@@ -1,4 +1,4 @@
-package fr.fumbus.blackflash.discord.lavaplayer;
+package fr.fumbus.blackflash.discord.lavalink;
 
 /**
  * Manages the music state for a single Discord guild.
