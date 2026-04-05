@@ -1,10 +1,11 @@
 package fr.fumbus.blackflash.configurations;
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonParser;
 import org.junit.jupiter.api.Test;
+import tools.jackson.core.JsonParser;
+import tools.jackson.core.ObjectReadContext;
+import tools.jackson.core.json.JsonFactory;
 
-import java.io.IOException;
+import java.io.StringReader;
 import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -19,67 +20,67 @@ class ObjectMapperConfigurationTests {
     private final JsonFactory jsonFactory = new JsonFactory();
 
     @Test
-    void objectMapper_isNotNull() {
-        assertThat(objectMapperConfiguration.objectMapper()).isNotNull();
+    void jsonMapper_isNotNull() {
+        assertThat(objectMapperConfiguration.jsonMapper()).isNotNull();
     }
 
     @Test
-    void objectMapper_trimsLeadingAndTrailingWhitespace() throws Exception {
+    void jsonMapper_trimsLeadingAndTrailingWhitespace() {
         String json = "{\"value\": \"  hello world  \"}";
 
-        TestStringDto result = objectMapperConfiguration.objectMapper().readValue(json, TestStringDto.class);
+        TestStringDto result = objectMapperConfiguration.jsonMapper().readValue(json, TestStringDto.class);
 
         assertThat(result.value()).isEqualTo("hello world");
     }
 
     @Test
-    void objectMapper_trimsOnlyWhitespaceStringToEmpty() throws Exception {
+    void jsonMapper_trimsOnlyWhitespaceStringToEmpty() {
         String json = "{\"value\": \"   \"}";
 
-        TestStringDto result = objectMapperConfiguration.objectMapper().readValue(json, TestStringDto.class);
+        TestStringDto result = objectMapperConfiguration.jsonMapper().readValue(json, TestStringDto.class);
 
         assertThat(result.value()).isEmpty();
     }
 
     @Test
-    void objectMapper_handlesNullStringValue() throws Exception {
+    void jsonMapper_handlesNullStringValue() {
         String json = "{\"value\": null}";
 
-        TestStringDto result = objectMapperConfiguration.objectMapper().readValue(json, TestStringDto.class);
+        TestStringDto result = objectMapperConfiguration.jsonMapper().readValue(json, TestStringDto.class);
 
         assertNull(result.value());
     }
 
     @Test
-    void objectMapper_doesNotFailOnUnknownProperties() {
+    void jsonMapper_doesNotFailOnUnknownProperties() {
         String json = "{\"value\": \"test\", \"unknown_field\": \"ignored\"}";
 
-        assertDoesNotThrow(() -> objectMapperConfiguration.objectMapper().readValue(json, TestStringDto.class));
+        assertDoesNotThrow(() -> objectMapperConfiguration.jsonMapper().readValue(json, TestStringDto.class));
     }
 
     @Test
-    void objectMapper_excludesNullFieldsFromSerialization() throws Exception {
+    void jsonMapper_excludesNullFieldsFromSerialization() {
         TestStringDto dto = new TestStringDto(null);
 
-        String json = objectMapperConfiguration.objectMapper().writeValueAsString(dto);
+        String json = objectMapperConfiguration.jsonMapper().writeValueAsString(dto);
 
         assertThat(json).doesNotContain("value");
     }
 
     @Test
-    void objectMapper_includesNonNullFieldsInSerialization() throws Exception {
+    void jsonMapper_includesNonNullFieldsInSerialization() {
         TestStringDto dto = new TestStringDto("hello");
 
-        String json = objectMapperConfiguration.objectMapper().writeValueAsString(dto);
+        String json = objectMapperConfiguration.jsonMapper().writeValueAsString(dto);
 
         assertThat(json).contains("hello");
     }
 
     @Test
-    void objectMapper_serialisesFieldsWithSnakeCase() throws Exception {
+    void jsonMapper_serialisesFieldsWithSnakeCase() {
         TestSnakeCaseDto dto = new TestSnakeCaseDto("test");
 
-        String json = objectMapperConfiguration.objectMapper().writeValueAsString(dto);
+        String json = objectMapperConfiguration.jsonMapper().writeValueAsString(dto);
 
         assertThat(json)
                 .contains("my_field")
@@ -87,30 +88,30 @@ class ObjectMapperConfigurationTests {
     }
 
     @Test
-    void objectMapper_deserialisesSnakeCaseFieldNames() throws Exception {
+    void jsonMapper_deserialisesSnakeCaseFieldNames() {
         String json = "{\"my_field\": \"value\"}";
 
-        TestSnakeCaseDto result = objectMapperConfiguration.objectMapper().readValue(json, TestSnakeCaseDto.class);
+        TestSnakeCaseDto result = objectMapperConfiguration.jsonMapper().readValue(json, TestSnakeCaseDto.class);
 
         assertThat(result.myField()).isEqualTo("value");
     }
 
     @Test
-    void objectMapper_deserialisesJsr310LocalDate() throws Exception {
+    void jsonMapper_deserialisesJsr310LocalDate() {
         String json = "{\"date\": \"2024-01-15\"}";
 
-        TestDateDto result = objectMapperConfiguration.objectMapper().readValue(json, TestDateDto.class);
+        TestDateDto result = objectMapperConfiguration.jsonMapper().readValue(json, TestDateDto.class);
 
         assertThat(result.date()).isEqualTo(LocalDate.of(2024, 1, 15));
     }
 
     @Test
-    void objectMapper_serialisesJsr310LocalDate() throws Exception {
+    void jsonMapper_serialisesJsr310LocalDate() {
         TestDateDto dto = new TestDateDto(LocalDate.of(2024, 1, 15));
 
-        String json = objectMapperConfiguration.objectMapper().writeValueAsString(dto);
+        String json = objectMapperConfiguration.jsonMapper().writeValueAsString(dto);
 
-        assertThat(json).contains("{\"date\":[2024,1,15]}");
+        assertThat(json).contains("{\"date\":\"2024-01-15\"}");
     }
 
     // -------------------------------------------------------------------------
@@ -118,7 +119,7 @@ class ObjectMapperConfigurationTests {
     // -------------------------------------------------------------------------
 
     @Test
-    void stringTrimmingDeserializer_trimsLeadingAndTrailingWhitespace() throws IOException {
+    void stringTrimmingDeserializer_trimsLeadingAndTrailingWhitespace() {
         JsonParser parser = createStringParser("  trimmed  ");
 
         String result = deserializer.deserialize(parser, null);
@@ -127,7 +128,7 @@ class ObjectMapperConfigurationTests {
     }
 
     @Test
-    void stringTrimmingDeserializer_returnsNullWhenValueIsNull() throws IOException {
+    void stringTrimmingDeserializer_returnsNullWhenValueIsNull() {
         JsonParser parser = createNullParser();
 
         String result = deserializer.deserialize(parser, null);
@@ -136,7 +137,7 @@ class ObjectMapperConfigurationTests {
     }
 
     @Test
-    void stringTrimmingDeserializer_trimsToEmptyWhenOnlyWhitespace() throws IOException {
+    void stringTrimmingDeserializer_trimsToEmptyWhenOnlyWhitespace() {
         JsonParser parser = createStringParser("   ");
 
         String result = deserializer.deserialize(parser, null);
@@ -145,7 +146,7 @@ class ObjectMapperConfigurationTests {
     }
 
     @Test
-    void stringTrimmingDeserializer_doesNotAlterAlreadyTrimmedString() throws IOException {
+    void stringTrimmingDeserializer_doesNotAlterAlreadyTrimmedString() {
         JsonParser parser = createStringParser("hello");
 
         String result = deserializer.deserialize(parser, null);
@@ -153,14 +154,14 @@ class ObjectMapperConfigurationTests {
         assertThat(result).isEqualTo("hello");
     }
 
-    private JsonParser createStringParser(String value) throws IOException {
-        JsonParser parser = jsonFactory.createParser('"' + value + '"');
+    private JsonParser createStringParser(String value) {
+        JsonParser parser = jsonFactory.createParser(ObjectReadContext.empty(), new StringReader("\"" + value + "\""));
         parser.nextToken();
         return parser;
     }
 
-    private JsonParser createNullParser() throws IOException {
-        JsonParser parser = jsonFactory.createParser("null");
+    private JsonParser createNullParser() {
+        JsonParser parser = jsonFactory.createParser(ObjectReadContext.empty(), new StringReader("null"));
         parser.nextToken();
         return parser;
     }

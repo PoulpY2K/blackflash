@@ -1,15 +1,17 @@
 package fr.fumbus.blackflash.configurations;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.*;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
-
-import java.io.IOException;
+import tools.jackson.core.JsonParser;
+import tools.jackson.databind.DeserializationContext;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.PropertyNamingStrategies;
+import tools.jackson.databind.ValueDeserializer;
+import tools.jackson.databind.cfg.DateTimeFeature;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.module.SimpleModule;
 
 /**
  * @author Jérémy Laurent <poulpy2k>
@@ -19,21 +21,24 @@ import java.io.IOException;
 public class ObjectMapperConfiguration {
     @Bean
     @Primary
-    public ObjectMapper objectMapper() {
+    public JsonMapper jsonMapper() {
         SimpleModule module = new SimpleModule();
         module.addDeserializer(String.class, new StringTrimmingDeserializer());
 
-        return new ObjectMapper()
-                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-                .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
-                .setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL)
-                .registerModule(new JavaTimeModule())
-                .registerModule(module);
+        return JsonMapper
+                .builder()
+                .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                .propertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
+                .changeDefaultPropertyInclusion(incl -> incl.withValueInclusion(JsonInclude.Include.NON_NULL))
+                .changeDefaultPropertyInclusion(incl -> incl.withContentInclusion(JsonInclude.Include.NON_NULL))
+                .enable(DateTimeFeature.WRITE_DATES_WITH_ZONE_ID)
+                .addModule(module)
+                .build();
     }
 
-    public static class StringTrimmingDeserializer extends JsonDeserializer<String> {
+    public static class StringTrimmingDeserializer extends ValueDeserializer<String> {
         @Override
-        public String deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+        public String deserialize(JsonParser p, DeserializationContext ctxt) {
             String value = p.getValueAsString();
             return value != null ? value.trim() : null;
         }

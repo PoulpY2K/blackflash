@@ -50,7 +50,7 @@ class DiscordConfigurationTests {
     void initializeJDA_doesNotThrowWhenTokenIsInvalid() {
         try (MockedStatic<JDABuilder> mockedJDABuilder = mockStatic(JDABuilder.class)) {
             mockedJDABuilder.when(() -> JDABuilder.createDefault(anyString())).thenReturn(jdaBuilder);
-            when(jdaBuilder.build()).thenThrow(mock(InvalidTokenException.class));
+            when(jdaBuilder.build()).thenThrow(new InvalidTokenException());
 
             assertDoesNotThrow(() -> discordConfiguration.initializeJDA());
         }
