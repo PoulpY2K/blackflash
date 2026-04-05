@@ -59,7 +59,7 @@
         <mapstruct.version>1.6.3</mapstruct.version>
         <commons-lang3.version>3.20.0</commons-lang3.version>
         <openapi-generator-maven-plugin.version>7.21.0</openapi-generator-maven-plugin.version>
-        <jda.version>6.4.0</jda.version>
+        <jda.version>6.4.1</jda.version>
         <lavalink-client.version>3.4.0</lavalink-client.version>
     </properties>
 
