@@ -4,12 +4,12 @@ FROM maven:3.9.14-eclipse-temurin-25 AS build
 WORKDIR /build
 
 COPY pom.xml .
-RUN mvn dependency:go-offline -B -q
+RUN mvn dependency:go-offline -B
 
 COPY lombok.config .
 COPY src ./src
 
-RUN mvn clean package -DskipTests -B -q
+RUN mvn clean package -DskipTests -B
 
 FROM eclipse-temurin:25-jre AS runtime
 
@@ -32,8 +32,8 @@ RUN apt-get update \
     && dpkg-reconfigure -f noninteractive tzdata \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
-    && groupadd --system --gid 1001 blackflash \
-    && useradd --system --uid 1001 --gid blackflash \
+    && groupadd --system --gid 674 blackflash \
+    && useradd --system --uid 674 --gid blackflash \
        --shell /usr/sbin/nologin --no-create-home blackflash
 
 WORKDIR /app
