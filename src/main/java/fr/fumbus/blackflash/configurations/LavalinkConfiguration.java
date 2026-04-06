@@ -13,8 +13,7 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
-import java.util.List;
+import org.springframework.context.annotation.Primary;
 
 /**
  * @author Jérémy Laurent <poulpy2k>
@@ -35,6 +34,7 @@ public class LavalinkConfiguration {
     private String password;
 
     @Bean
+    @Primary
     public LavalinkClient lavalinkClient(@Value("${discord.token}") String token) {
         LavalinkClient client = new LavalinkClient(Helpers.getUserIdFromToken(token));
         client.getLoadBalancer().addPenaltyProvider(new VoiceRegionPenaltyProvider());
@@ -44,21 +44,16 @@ public class LavalinkConfiguration {
     }
 
     private void registerNodes(LavalinkClient client) {
-        List.of(
-                client.addNode(
+        client.addNode(
                         new NodeOptions.Builder()
                                 .setName(name)
                                 .setServerUri("ws://" + uri)
                                 .setPassword(password)
                                 .setRegionFilter(RegionGroup.EUROPE)
                                 .build()
-                )
-        ).forEach(node -> node
-                .on(TrackStartEvent.class)
-                .subscribe(event ->
-                        log.trace("{}: track started: {}", event.getNode().getName(), event.getTrack().getInfo())
-                )
-        );
+                ).on(TrackStartEvent.class)
+                .subscribe(event -> log.info("Node '{}' started track: {}",
+                        event.getNode().getName(), event.getTrack().getInfo().getTitle()));
     }
 
     private void registerInfrastructureListeners(LavalinkClient client) {
@@ -78,10 +73,10 @@ public class LavalinkConfiguration {
                 );
 
         client.on(EmittedEvent.class).subscribe(event -> {
-            if (event instanceof TrackStartEvent trackStartEvent) {
-                log.info("Track info: {}", trackStartEvent.getTrack().getInfo());
-            }
             log.info("Node '{}' emitted event: {}", event.getNode().getName(), event);
+            if (event instanceof TrackStartEvent trackStartEvent) {
+                log.debug("Emitted track start: {}", trackStartEvent.getTrack().getInfo().getTitle());
+            }
         });
     }
 }

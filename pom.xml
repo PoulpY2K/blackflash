@@ -61,6 +61,7 @@
         <openapi-generator-maven-plugin.version>7.21.0</openapi-generator-maven-plugin.version>
         <jda.version>6.4.1</jda.version>
         <lavalink-client.version>3.4.0</lavalink-client.version>
+        <jdave-api.version>0.1.8</jdave-api.version>
     </properties>
 
     <repositories>
@@ -159,6 +160,21 @@
             <groupId>dev.arbjerg</groupId>
             <artifactId>lavalink-client</artifactId>
             <version>${lavalink-client.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>club.minnced</groupId>
+            <artifactId>jdave-api</artifactId>
+            <version>${jdave-api.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>club.minnced</groupId>
+            <artifactId>jdave-native-win-x86-64</artifactId>
+            <version>${jdave-api.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>club.minnced</groupId>
+            <artifactId>jdave-native-linux-x86-64</artifactId>
+            <version>${jdave-api.version}</version>
         </dependency>
         <dependency>
             <groupId>net.dv8tion</groupId>

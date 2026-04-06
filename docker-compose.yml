@@ -1,7 +1,7 @@
 services:
   lavalink:
-    # pin the image version to Lavalink v4 and use the alpine variant for a smaller image size
-    image: ghcr.io/lavalink-devs/lavalink:4-alpine
+    # pin the image version to Lavalink v4
+    image: ghcr.io/lavalink-devs/lavalink:4
     container_name: lavalink
     restart: unless-stopped
     mem_limit: 6G
@@ -11,7 +11,10 @@ services:
       # set lavalink server port
       - SERVER_PORT=2333
       # set password for lavalink
-      - LAVALINK_SERVER_PASSWORD=youshallnotpass
+      - LAVALINK_SERVER_PASSWORD=${LAVALINK_PASSWORD:-}
+      - SPOTIFY_ID=${SPOTIFY_ID:-}
+      - SPOTIFY_SECRET=${SPOTIFY_SECRET:-}
+      - SPOTIFY_DC=${SPOTIFY_DC:-}
     user:
       322:322
     volumes:

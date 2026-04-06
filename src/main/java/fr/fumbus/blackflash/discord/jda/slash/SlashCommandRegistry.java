@@ -11,6 +11,8 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
+import static fr.fumbus.blackflash.discord.jda.slash.SlashCommandConstants.*;
+
 /**
  * Registry that builds and holds all Discord slash commands.
  * Commands are built once at instantiation and cached for reuse.
@@ -26,7 +28,7 @@ public class SlashCommandRegistry {
     private final List<CommandData> commands;
 
     public SlashCommandRegistry() {
-        this.commands = List.of(
+        commands = List.of(
                 buildHelpCommand(),
                 buildJoinCommand(),
                 buildPlayCommand(),
@@ -39,43 +41,43 @@ public class SlashCommandRegistry {
     }
 
     private static @NonNull SlashCommandData buildPlayCommand() {
-        return Commands.slash("play", "Play a song or a playlist from a URL or search query")
+        return Commands.slash(COMMAND_PLAY, "Play a song or a playlist from a URL or search query")
                 .setContexts(InteractionContextType.GUILD)
                 .addOption(OptionType.STRING, "query", "URL or search query", true);
     }
 
     private static @NonNull SlashCommandData buildSkipCommand() {
-        return Commands.slash("skip", "Skip the current track")
+        return Commands.slash(COMMAND_SKIP, "Skip the current track")
                 .setContexts(InteractionContextType.GUILD);
     }
 
     private static @NonNull SlashCommandData buildStopCommand() {
-        return Commands.slash("stop", "Stop playback and clear the queue")
+        return Commands.slash(COMMAND_STOP, "Stop playback and clear the queue")
                 .setContexts(InteractionContextType.GUILD);
     }
 
     private static @NonNull SlashCommandData buildShuffleCommand() {
-        return Commands.slash("shuffle", "Shuffle the playlist")
+        return Commands.slash(COMMAND_SHUFFLE, "Shuffle the playlist")
                 .setContexts(InteractionContextType.GUILD);
     }
 
     private static @NonNull SlashCommandData buildLoopCommand() {
-        return Commands.slash("loop", "Loop the current track or playlist")
+        return Commands.slash(COMMAND_LOOP, "Loop the current track or playlist")
                 .setContexts(InteractionContextType.GUILD);
     }
 
     private static @NonNull SlashCommandData buildHelpCommand() {
-        return Commands.slash("help", "Display help information")
+        return Commands.slash(COMMAND_HELP, "Display help information")
                 .setContexts(InteractionContextType.GUILD);
     }
 
     private static @NonNull SlashCommandData buildLeaveCommand() {
-        return Commands.slash("leave", "Leave the voice channel")
+        return Commands.slash(COMMAND_LEAVE, "Leave the voice channel")
                 .setContexts(InteractionContextType.GUILD);
     }
 
     private static @NonNull SlashCommandData buildJoinCommand() {
-        return Commands.slash("join", "Join the voice channel")
+        return Commands.slash(COMMAND_JOIN, "Join the voice channel")
                 .setContexts(InteractionContextType.GUILD);
     }
 }

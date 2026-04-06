@@ -1,19 +1,20 @@
 package fr.fumbus.blackflash.configurations;
 
+import club.minnced.discord.jdave.interop.JDaveSessionFactory;
+import dev.arbjerg.lavalink.client.LavalinkClient;
+import dev.arbjerg.lavalink.libraries.jda.JDAVoiceUpdateListener;
 import fr.fumbus.blackflash.discord.jda.slash.SlashCommandListener;
-import fr.fumbus.blackflash.discord.jda.slash.SlashCommandRegistry;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
+import net.dv8tion.jda.api.audio.AudioModuleConfig;
 import net.dv8tion.jda.api.entities.Activity;
 import net.dv8tion.jda.api.exceptions.InvalidTokenException;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.utils.ChunkingFilter;
 import net.dv8tion.jda.api.utils.MemberCachePolicy;
 import net.dv8tion.jda.api.utils.cache.CacheFlag;
-import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 
@@ -38,8 +39,8 @@ public class DiscordConfiguration {
             GatewayIntent.GUILD_VOICE_STATES
     );
 
-    private final SlashCommandRegistry slashCommandRegistry;
     private final SlashCommandListener listener;
+    private final LavalinkClient lavalink;
 
     @Value("${discord.token}")
     private String token;
@@ -50,9 +51,22 @@ public class DiscordConfiguration {
     @PostConstruct
     public void initializeJDA() {
         try {
-            log.info("Initializing JDA, registering listeners and commands...");
-            JDA jdaClient = buildJDA();
-            registerCommands(jdaClient);
+            log.info("Initializing JDA, registering listeners...");
+
+            JDABuilder.createDefault(token)
+                    .setVoiceDispatchInterceptor(new JDAVoiceUpdateListener(lavalink))
+                    .enableIntents(enabledIntents)
+                    .enableCache(CacheFlag.VOICE_STATE, CacheFlag.ONLINE_STATUS, CacheFlag.ACTIVITY)
+                    .setActivity(Activity.listening(activity))
+                    .setAutoReconnect(true)
+                    .setMemberCachePolicy(MemberCachePolicy.ALL)
+                    .setChunkingFilter(ChunkingFilter.include(100))
+                    .addEventListeners(listener)
+                    .setAudioModuleConfig(new AudioModuleConfig()
+                            .withDaveSessionFactory(new JDaveSessionFactory()))
+                    .build()
+                    .awaitReady();
+
             log.info("JDA initialized successfully.");
         } catch (InvalidTokenException e) {
             log.error("Invalid token, JDA could not initialize: {}", e.getMessage(), e);
@@ -63,24 +77,5 @@ public class DiscordConfiguration {
             log.error("An unexpected error occurred while initializing JDA: {}", e.getMessage(), e);
             throw e;
         }
-    }
-
-    private void registerCommands(JDA jda) {
-        jda.updateCommands()
-                .addCommands(slashCommandRegistry.getCommands())
-                .queue();
-    }
-
-    private @NonNull JDA buildJDA() throws InterruptedException {
-        return JDABuilder.createDefault(token)
-                .enableIntents(enabledIntents)
-                .enableCache(CacheFlag.EMOJI, CacheFlag.STICKER, CacheFlag.SCHEDULED_EVENTS, CacheFlag.VOICE_STATE, CacheFlag.ONLINE_STATUS, CacheFlag.ACTIVITY)
-                .setActivity(Activity.listening(activity))
-                .setAutoReconnect(true)
-                .setMemberCachePolicy(MemberCachePolicy.ALL)
-                .setChunkingFilter(ChunkingFilter.include(100))
-                .addEventListeners(listener)
-                .build()
-                .awaitReady();
     }
 }

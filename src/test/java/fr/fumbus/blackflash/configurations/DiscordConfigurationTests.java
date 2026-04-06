@@ -1,11 +1,10 @@
 package fr.fumbus.blackflash.configurations;
 
+import dev.arbjerg.lavalink.client.LavalinkClient;
 import fr.fumbus.blackflash.discord.jda.slash.SlashCommandListener;
-import fr.fumbus.blackflash.discord.jda.slash.SlashCommandRegistry;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.exceptions.InvalidTokenException;
-import net.dv8tion.jda.api.requests.restaction.CommandListUpdateAction;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,17 +20,14 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class DiscordConfigurationTests {
 
+    @Mock
+    LavalinkClient lavalink;
+
     @Mock(answer = Answers.RETURNS_SELF)
     JDABuilder jdaBuilder;
 
     @Mock
     JDA jda;
-
-    @Mock(answer = Answers.RETURNS_SELF)
-    CommandListUpdateAction updateAction;
-
-    @Mock
-    SlashCommandRegistry slashCommandRegistry;
 
     @Mock
     SlashCommandListener listener;
@@ -67,17 +63,15 @@ class DiscordConfigurationTests {
     }
 
     @Test
-    void initializeJDA_buildsJdaAndRegistersCommandsOnSuccess() throws Exception {
+    void initializeJDA_buildsJdaAndAwaitsReadiness() throws Exception {
         try (MockedStatic<JDABuilder> mockedJDABuilder = mockStatic(JDABuilder.class)) {
             mockedJDABuilder.when(() -> JDABuilder.createDefault(anyString())).thenReturn(jdaBuilder);
             when(jdaBuilder.build()).thenReturn(jda);
             when(jda.awaitReady()).thenReturn(jda);
-            when(jda.updateCommands()).thenReturn(updateAction);
 
             assertDoesNotThrow(() -> discordConfiguration.initializeJDA());
 
-            verify(jda).updateCommands();
-            verify(updateAction).queue();
+            verify(jda).awaitReady();
         }
     }
 }
