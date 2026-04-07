@@ -50,8 +50,6 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          build-args: |
-            VERSIONING_GIT_TAG=${{ env.TAG }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

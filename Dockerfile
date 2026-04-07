@@ -9,7 +9,7 @@ RUN mvn dependency:go-offline -B
 COPY lombok.config .
 COPY src ./src
 
-RUN mvn clean package -DskipTests -B
+RUN mvn clean package "-Dgit.tag=$TAG" -DskipTests -B
 
 FROM eclipse-temurin:25-jre AS runtime
 
