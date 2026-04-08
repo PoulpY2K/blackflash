@@ -8,7 +8,7 @@ info.app:
 
 discord:
   token: ${DISCORD_TOKEN:none}
-  activity: "v${info.app.artifactVersion} | /help"
+  activity: "${info.app.artifactVersion} | /help"
 
 lavalink:
   name: ${LAVALINK_NAME:blackflash}
