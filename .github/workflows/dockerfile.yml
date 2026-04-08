@@ -24,6 +24,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
+      - name: Lowercase image name
+        env:
+          REPO: ${{ github.repository }}
+        run: echo "IMAGE_NAME_LOWER=${REPO,,}" >> $GITHUB_ENV
+
       - name: Download JAR artifact
         uses: actions/download-artifact@v4
         with:
@@ -73,8 +78,8 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:build-cache
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:build-cache,mode=max
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LOWER }}:build-cache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LOWER }}:build-cache,mode=max
 
       - name: Sign the published Docker image
         env:
