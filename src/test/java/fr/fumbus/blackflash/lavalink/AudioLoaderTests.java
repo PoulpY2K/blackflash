@@ -1,9 +1,6 @@
 package fr.fumbus.blackflash.lavalink;
 
 import dev.arbjerg.lavalink.client.player.*;
-import fr.fumbus.blackflash.lavalink.AudioLoader;
-import fr.fumbus.blackflash.lavalink.GuildMusicManager;
-import fr.fumbus.blackflash.lavalink.UserData;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

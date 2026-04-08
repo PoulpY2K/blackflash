@@ -63,7 +63,8 @@ The project uses a **custom `JsonMapper`** (`ObjectMapperConfiguration`) that:
 - Ignores unknown JSON properties (does NOT fail on extra fields)
 - Supports `java.time.*` classes via `DateTimeFeature.WRITE_DATES_WITH_ZONE_ID` (built into Jackson 3.x)
 
-**Jackson 3.x (Spring Boot 4)**: Core API imports use `tools.jackson.*` (not `com.fasterxml.jackson.*`); Jackson annotation imports (e.g., `@JsonInclude`) remain in `com.fasterxml.jackson.annotation.*` — that package did not move.
+**Jackson 3.x (Spring Boot 4)**: Core API imports use `tools.jackson.*` (not `com.fasterxml.jackson.*`); Jackson
+annotation imports (e.g., `@JsonInclude`) remain in `com.fasterxml.jackson.annotation.*` — that package did not move.
 `StringTrimmingDeserializer`
 extends `ValueDeserializer<String>`, and the bean type is `JsonMapper` (not `ObjectMapper`). There is no separate
 `jackson-datatype-jsr310` dependency — JSR-310 support is built in.
@@ -129,10 +130,17 @@ JSON names map correctly.
       does not throw, `TrackStartEvent`/`TrackEndEvent` subscriptions are verified, event handlers forward to the
       correct guild's `TrackScheduler` and do nothing when no manager is registered
     - `SlashCommandRegistryTests.java`: `getCommands()` returns all 8 commands by name; all commands are guild-scoped;
-      `/play` has exactly one required `STRING` option named `query`; all other commands have empty options; `getCommands()` list is the same instance across calls
-    - `AudioLoaderTests.java`: `ontrackLoaded` attaches `UserData` and enqueues; `onPlaylistLoaded` enqueues all tracks; `onSearchResultLoaded` picks first result (or sends "No tracks found!" if empty); `noMatches` and `loadFailed` send appropriate hook messages
-    - `GuildMusicManagerTests.java`: constructor creates `TrackScheduler` via `MockedConstruction`; `getLink()`/`getPlayer()` return empty when no link is cached; return present values when link is cached; `stop()` clears queue and calls `setPaused(false)` (no throw when player is absent)
-    - `TrackSchedulerTests.java`: `enqueue()` starts track immediately when player absent or no current track, queues when playing; `enqueuePlaylist()` queues all when playing, starts first and queues rest otherwise; `onTrackStart`/`onTrackEnd` do not throw
+      `/play` has exactly one required `STRING` option named `query`; all other commands have empty options;
+      `getCommands()` list is the same instance across calls
+    - `AudioLoaderTests.java`: `ontrackLoaded` attaches `UserData` and enqueues; `onPlaylistLoaded` enqueues all tracks;
+      `onSearchResultLoaded` picks first result (or sends "No tracks found!" if empty); `noMatches` and `loadFailed`
+      send appropriate hook messages
+    - `GuildMusicManagerTests.java`: constructor creates `TrackScheduler` via `MockedConstruction`; `getLink()`/
+      `getPlayer()` return empty when no link is cached; return present values when link is cached; `stop()` clears
+      queue and calls `setPaused(false)` (no throw when player is absent)
+    - `TrackSchedulerTests.java`: `enqueue()` starts track immediately when player absent or no current track, queues
+      when playing; `enqueuePlaylist()` queues all when playing, starts first and queues rest otherwise; `onTrackStart`/
+      `onTrackEnd` do not throw
     - `UserDataTests.java`: stores requester ID; equal/hashCode for same ID; not equal for different IDs
 - **Test reports**: Maven Surefire generates reports in `target/surefire-reports/`
 
@@ -145,27 +153,27 @@ JSON names map correctly.
 
 ## Key Files & Their Roles
 
-| File                                                              | Purpose                                                                                                                                                                                                                           |
-|-------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `pom.xml`                                                         | Maven config: dependencies, plugins, compiler settings (MapStruct, Lombok), code generation                                                                                                                                       |
-| `src/main/java/.../BlackflashApplication.java`                    | Entry point: sets Paris timezone, excludes DB & user-details auto-config                                                                                                                                                          |
-| `src/main/java/.../configurations/DiscordConfiguration.java`      | Creates and initializes JDA using `discord.token`/`discord.activity` properties; injects `SlashCommandListener` and `LavalinkClient`; sets `JDAVoiceUpdateListener(lavalink)` as voice dispatch interceptor; enables DAVE E2E audio encryption via `AudioModuleConfig` + `JDaveSessionFactory` |
-| `src/main/java/.../configurations/LavalinkConfiguration.java`     | Creates the `LavalinkClient` Spring bean; registers Lavalink nodes and infrastructure event listeners                                                                                                                             |
-| `src/main/java/.../configurations/ObjectMapperConfiguration.java` | Custom Jackson `JsonMapper` bean with string trimming & snake_case deserialization (Jackson 3.x / `tools.jackson.*`)                                                                                                              |
-| `src/main/java/.../discord/slash/SlashCommandConstants.java`      | `@UtilityClass` holding string constants for all slash command names (e.g., `COMMAND_PLAY`, `COMMAND_JOIN`)                                                                                                                       |
-| `src/main/java/.../discord/slash/SlashCommandListener.java`       | Spring `@Component`; extends `ListenerAdapter`; holds per-guild `GuildMusicManager` map; registers commands in `onReady()`; handles `/join`, `/play`, `/stop`, `/leave`; subscribes to Lavalink track events via `@PostConstruct` |
-| `src/main/java/.../discord/slash/SlashCommandRegistry.java`       | Spring `@Component`; builds and exposes all `CommandData` objects (help, join, play, skip, loop, shuffle, leave, stop)                                                                                                            |
-| `src/main/java/.../lavalink/AudioLoader.java`                     | Per-query `AbstractAudioLoadResultHandler`; handles `ontrackLoaded`, `onPlaylistLoaded`, `onSearchResultLoaded`, `noMatches`, `loadFailed`; delegates to `TrackScheduler.enqueue()`                                               |
-| `src/main/java/.../lavalink/UserData.java`                        | Record `UserData(long requester)` — attached to each `Track` to store the requesting user's ID                                                                                                                                    |
+| File                                                              | Purpose                                                                                                                                                                                                                                                                                                                   |
+|-------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `pom.xml`                                                         | Maven config: dependencies, plugins, compiler settings (MapStruct, Lombok), code generation                                                                                                                                                                                                                               |
+| `src/main/java/.../BlackflashApplication.java`                    | Entry point: sets Paris timezone, excludes DB & user-details auto-config                                                                                                                                                                                                                                                  |
+| `src/main/java/.../configurations/DiscordConfiguration.java`      | Creates and initializes JDA using `discord.token`/`discord.activity` properties; injects `SlashCommandListener` and `LavalinkClient`; sets `JDAVoiceUpdateListener(lavalink)` as voice dispatch interceptor; enables DAVE E2E audio encryption via `AudioModuleConfig` + `JDaveSessionFactory`                            |
+| `src/main/java/.../configurations/LavalinkConfiguration.java`     | Creates the `LavalinkClient` Spring bean; registers Lavalink nodes and infrastructure event listeners                                                                                                                                                                                                                     |
+| `src/main/java/.../configurations/ObjectMapperConfiguration.java` | Custom Jackson `JsonMapper` bean with string trimming & snake_case deserialization (Jackson 3.x / `tools.jackson.*`)                                                                                                                                                                                                      |
+| `src/main/java/.../discord/slash/SlashCommandConstants.java`      | `@UtilityClass` holding string constants for all slash command names (e.g., `COMMAND_PLAY`, `COMMAND_JOIN`)                                                                                                                                                                                                               |
+| `src/main/java/.../discord/slash/SlashCommandListener.java`       | Spring `@Component`; extends `ListenerAdapter`; holds per-guild `GuildMusicManager` map; registers commands in `onReady()`; handles `/join`, `/play`, `/stop`, `/leave`; subscribes to Lavalink track events via `@PostConstruct`                                                                                         |
+| `src/main/java/.../discord/slash/SlashCommandRegistry.java`       | Spring `@Component`; builds and exposes all `CommandData` objects (help, join, play, skip, loop, shuffle, leave, stop)                                                                                                                                                                                                    |
+| `src/main/java/.../lavalink/AudioLoader.java`                     | Per-query `AbstractAudioLoadResultHandler`; handles `ontrackLoaded`, `onPlaylistLoaded`, `onSearchResultLoaded`, `noMatches`, `loadFailed`; delegates to `TrackScheduler.enqueue()`                                                                                                                                       |
+| `src/main/java/.../lavalink/UserData.java`                        | Record `UserData(long requester)` — attached to each `Track` to store the requesting user's ID                                                                                                                                                                                                                            |
 | `src/main/java/.../lavalink/GuildMusicManager.java`               | Per-guild manager (not a Spring bean); two constructors: `(long, LavalinkClient)` for normal use and `(TrackScheduler, long, LavalinkClient)` for test injection; exposes `stop()` (clears queue, calls `setPaused(false).setTrack(null).subscribe()`), `getLink()`, `getPlayer()`, `getTrackScheduler()`, `getGuildId()` |
-| `src/main/java/.../lavalink/TrackScheduler.java`                  | Per-guild Lavalink event handler; queue management implemented: `enqueue()`, `enqueuePlaylist()`, `startTrack()`; `onTrackStart`/`onTrackEnd` log only (TODO: send Discord messages)                                              |
-| `src/main/resources/application.yaml`                             | Runtime config: actuator endpoints, caching, metrics export, health probes                                                                                                                                                        |
-| `src/main/resources/api-spec/blackflash-api.yaml`                 | OpenAPI 3.1.1 specification (currently minimal)                                                                                                                                                                                   |
-| `docker-compose.yml`                                              | Starts a Lavalink v4 (alpine) container on `127.0.0.1:2333` for local development                                                                                                                                                 |
-| `lavalink/application.yml`                                        | Lavalink server config: password, enabled sources, filters, buffer settings                                                                                                                                                       |
-| `lavalink/plugins/`                                               | Pre-downloaded Lavalink plugin JARs: `youtube-plugin-1.18.0.jar`, `lavasrc-plugin-4.8.1.jar`, `lavasearch-plugin-1.0.0.jar`                                                                                                       |
-| `lombok.config`                                                   | Lombok global settings: generated annotations, custom Builder class naming                                                                                                                                                        |
-| `docs/blackflash-sequence.puml`                                   | Sequence diagrams for Blackflash interactions                                                                                                                                                                                     |
+| `src/main/java/.../lavalink/TrackScheduler.java`                  | Per-guild Lavalink event handler; queue management implemented: `enqueue()`, `enqueuePlaylist()`, `startTrack()`; `onTrackStart`/`onTrackEnd` log only (TODO: send Discord messages)                                                                                                                                      |
+| `src/main/resources/application.yaml`                             | Runtime config: actuator endpoints, caching, metrics export, health probes                                                                                                                                                                                                                                                |
+| `src/main/resources/api-spec/blackflash-api.yaml`                 | OpenAPI 3.1.1 specification (currently minimal)                                                                                                                                                                                                                                                                           |
+| `docker-compose.yml`                                              | Starts a Lavalink v4 (alpine) container on `127.0.0.1:2333` for local development                                                                                                                                                                                                                                         |
+| `lavalink/application.yml`                                        | Lavalink server config: password, enabled sources, filters, buffer settings                                                                                                                                                                                                                                               |
+| `lavalink/plugins/`                                               | Pre-downloaded Lavalink plugin JARs: `youtube-plugin-1.18.0.jar`, `lavasrc-plugin-4.8.1.jar`, `lavasearch-plugin-1.0.0.jar`                                                                                                                                                                                               |
+| `lombok.config`                                                   | Lombok global settings: generated annotations, custom Builder class naming                                                                                                                                                                                                                                                |
+| `docs/blackflash-sequence.puml`                                   | Sequence diagrams for Blackflash interactions                                                                                                                                                                                                                                                                             |
 
 ## Integration Points
 
@@ -186,7 +194,8 @@ JSON names map correctly.
 - **DAVE E2E audio encryption**: `AudioModuleConfig.withDaveSessionFactory(new JDaveSessionFactory())` is passed to
   `JDABuilder.setAudioModuleConfig()`; requires `club.minnced:jdave-api:0.1.8` and the matching native library
   (`jdave-native-win-x86-64` or `jdave-native-linux-x86-64`)
-- **Voice dispatch interceptor**: `new JDAVoiceUpdateListener(lavalink)` is set via `JDABuilder.setVoiceDispatchInterceptor()`; this bridges JDA voice state update events to the Lavalink client
+- **Voice dispatch interceptor**: `new JDAVoiceUpdateListener(lavalink)` is set via
+  `JDABuilder.setVoiceDispatchInterceptor()`; this bridges JDA voice state update events to the Lavalink client
 - **Enabled GatewayIntents**: `GUILD_MESSAGE_REACTIONS`, `GUILD_MEMBERS`, `GUILD_PRESENCES`, `GUILD_MESSAGES`,
   `GUILD_VOICE_STATES` (set in `initializeJDA()`)
 - **Enabled CacheFlags**: `VOICE_STATE`, `ONLINE_STATUS`, `ACTIVITY`
@@ -215,10 +224,12 @@ JSON names map correctly.
 - **`TrackScheduler`** (`lavalink/` package): per-guild lifecycle handler; `queue` field is `public
   Queue<Track>` (directly accessed in tests); queue management **implemented**: `enqueue()` starts immediately if no
   track is playing, otherwise queues; `enqueuePlaylist()` adds all tracks then starts the first; `startTrack()` calls
-  `link.createOrUpdatePlayer()` with volume 50 and `setEndTime(track.getInfo().getLength())`; `onTrackStart`/`onTrackEnd`
+  `link.createOrUpdatePlayer()` with volume 50 and `setEndTime(track.getInfo().getLength())`; `onTrackStart`/
+  `onTrackEnd`
   log only (TODO: send Discord messages)
 - **`AudioLoader`** (`lavalink/` package): per-query `AbstractAudioLoadResultHandler`; handles
-  `ontrackLoaded` (attaches `UserData`, calls `enqueue()`, sends `"Added to queue: {title}\nRequested by: <@{id}>"` via hook), `onPlaylistLoaded` (calls `enqueuePlaylist()`),
+  `ontrackLoaded` (attaches `UserData`, calls `enqueue()`, sends `"Added to queue: {title}\nRequested by: <@{id}>"` via
+  hook), `onPlaylistLoaded` (calls `enqueuePlaylist()`),
   `onSearchResultLoaded` (picks first result), `noMatches`, `loadFailed`; replies via `event.getHook()`
 - **`UserData`** record (`lavalink/` package): `record UserData(long requester)` — attached to each `Track`
   via `track.setUserData(new UserData(event.getUser().getIdLong()))`

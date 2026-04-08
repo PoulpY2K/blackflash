@@ -4,8 +4,6 @@ import dev.arbjerg.lavalink.client.LavalinkClient;
 import dev.arbjerg.lavalink.client.Link;
 import dev.arbjerg.lavalink.client.player.LavalinkPlayer;
 import dev.arbjerg.lavalink.client.player.Track;
-import fr.fumbus.blackflash.lavalink.GuildMusicManager;
-import fr.fumbus.blackflash.lavalink.TrackScheduler;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Answers;

@@ -6,6 +6,7 @@ import dev.arbjerg.lavalink.client.event.TrackEndEvent;
 import dev.arbjerg.lavalink.client.event.TrackStartEvent;
 import fr.fumbus.blackflash.lavalink.AudioLoader;
 import fr.fumbus.blackflash.lavalink.GuildMusicManager;
+import fr.fumbus.blackflash.lavalink.LoopMode;
 import jakarta.annotation.PostConstruct;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
@@ -100,10 +101,27 @@ public class SlashCommandListener extends ListenerAdapter {
             case COMMAND_PLAY:
                 playSong(event, guild);
                 break;
+            case COMMAND_LOOP:
+                handleLoop(event, guild);
+                break;
             default:
                 log.warn("Received an unknown slash command interaction: {}", commandName);
                 event.reply("Unknown command!").setEphemeral(true).queue();
         }
+    }
+
+    private void handleLoop(SlashCommandInteractionEvent event, Guild guild) {
+        final GuildMusicManager manager = getOrCreateMusicManager(guild.getIdLong());
+        final LoopMode newMode = manager.getTrackScheduler().getLoopMode().next();
+        manager.getTrackScheduler().setLoopMode(newMode);
+
+        String message = switch (newMode) {
+            case TRACK -> "🔂 Loop track enabled!";
+            case QUEUE -> "🔁 Loop queue enabled!";
+            default -> "Loop disabled!";
+        };
+
+        event.reply(message).queue();
     }
 
     private void playSong(SlashCommandInteractionEvent event, Guild guild) {

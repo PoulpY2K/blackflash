@@ -5,8 +5,7 @@ import dev.arbjerg.lavalink.client.event.TrackEndEvent;
 import dev.arbjerg.lavalink.client.event.TrackStartEvent;
 import dev.arbjerg.lavalink.client.player.LavalinkPlayer;
 import dev.arbjerg.lavalink.client.player.Track;
-import fr.fumbus.blackflash.lavalink.GuildMusicManager;
-import fr.fumbus.blackflash.lavalink.TrackScheduler;
+import dev.arbjerg.lavalink.protocol.v4.Message;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Answers;
@@ -124,5 +123,94 @@ class TrackSchedulerTests {
         TrackEndEvent event = mock(TrackEndEvent.class, Answers.RETURNS_DEEP_STUBS);
 
         assertDoesNotThrow(() -> trackScheduler.onTrackEnd(event));
+    }
+
+    @Test
+    void onTrackEnd_withStoppedReason_doesNotStartNextTrack() {
+        trackScheduler.queue.offer(mock(Track.class));
+        TrackEndEvent event = mock(TrackEndEvent.class, Answers.RETURNS_DEEP_STUBS);
+        when(event.getEndReason()).thenReturn(Message.EmittedEvent.TrackEndEvent.AudioTrackEndReason.STOPPED);
+
+        trackScheduler.onTrackEnd(event);
+
+        assertThat(trackScheduler.queue).hasSize(1);
+        verify(guildMusicManager, never()).getLink();
+    }
+
+    @Test
+    void onTrackEnd_withDisabledMode_startsNextTrackInQueue() {
+        Link link = mock(Link.class, Answers.RETURNS_DEEP_STUBS);
+        when(guildMusicManager.getLink()).thenReturn(Optional.of(link));
+        Track nextTrack = mock(Track.class, Answers.RETURNS_DEEP_STUBS);
+        trackScheduler.queue.offer(nextTrack);
+
+        TrackEndEvent event = mock(TrackEndEvent.class, Answers.RETURNS_DEEP_STUBS);
+        when(event.getEndReason()).thenReturn(Message.EmittedEvent.TrackEndEvent.AudioTrackEndReason.FINISHED);
+
+        trackScheduler.onTrackEnd(event);
+
+        assertThat(trackScheduler.queue).isEmpty();
+        verify(link).createOrUpdatePlayer();
+    }
+
+    @Test
+    void onTrackEnd_withDisabledModeAndEmptyQueue_stopsPlayback() {
+        TrackEndEvent event = mock(TrackEndEvent.class, Answers.RETURNS_DEEP_STUBS);
+        when(event.getEndReason()).thenReturn(Message.EmittedEvent.TrackEndEvent.AudioTrackEndReason.FINISHED);
+
+        trackScheduler.onTrackEnd(event);
+
+        assertThat(trackScheduler.queue).isEmpty();
+        verify(guildMusicManager, never()).getLink();
+    }
+
+    @Test
+    void onTrackEnd_withLoopTrackMode_restartsEndedTrack() {
+        Link link = mock(Link.class, Answers.RETURNS_DEEP_STUBS);
+        when(guildMusicManager.getLink()).thenReturn(Optional.of(link));
+        trackScheduler.setLoopMode(LoopMode.TRACK);
+
+        TrackEndEvent event = mock(TrackEndEvent.class, Answers.RETURNS_DEEP_STUBS);
+        when(event.getEndReason()).thenReturn(Message.EmittedEvent.TrackEndEvent.AudioTrackEndReason.FINISHED);
+
+        trackScheduler.onTrackEnd(event);
+
+        assertThat(trackScheduler.queue).isEmpty();
+        verify(link).createOrUpdatePlayer();
+    }
+
+    @Test
+    void onTrackEnd_withLoopQueueMode_requeueEndedTrackAndStartsNext() {
+        Link link = mock(Link.class, Answers.RETURNS_DEEP_STUBS);
+        when(guildMusicManager.getLink()).thenReturn(Optional.of(link));
+        trackScheduler.setLoopMode(LoopMode.QUEUE);
+
+        Track endedTrack = mock(Track.class, Answers.RETURNS_DEEP_STUBS);
+        Track nextTrack = mock(Track.class, Answers.RETURNS_DEEP_STUBS);
+        trackScheduler.queue.offer(nextTrack);
+
+        TrackEndEvent event = mock(TrackEndEvent.class, Answers.RETURNS_DEEP_STUBS);
+        when(event.getEndReason()).thenReturn(Message.EmittedEvent.TrackEndEvent.AudioTrackEndReason.FINISHED);
+        when(event.getTrack()).thenReturn(endedTrack);
+
+        trackScheduler.onTrackEnd(event);
+
+        assertThat(trackScheduler.queue).containsExactly(endedTrack);
+        verify(link).createOrUpdatePlayer();
+    }
+
+    @Test
+    void onTrackEnd_withLoopQueueModeAndEmptyQueue_loopsCurrentTrack() {
+        Link link = mock(Link.class, Answers.RETURNS_DEEP_STUBS);
+        when(guildMusicManager.getLink()).thenReturn(Optional.of(link));
+        trackScheduler.setLoopMode(LoopMode.QUEUE);
+
+        TrackEndEvent event = mock(TrackEndEvent.class, Answers.RETURNS_DEEP_STUBS);
+        when(event.getEndReason()).thenReturn(Message.EmittedEvent.TrackEndEvent.AudioTrackEndReason.FINISHED);
+
+        trackScheduler.onTrackEnd(event);
+
+        assertThat(trackScheduler.queue).isEmpty();
+        verify(link).createOrUpdatePlayer();
     }
 }

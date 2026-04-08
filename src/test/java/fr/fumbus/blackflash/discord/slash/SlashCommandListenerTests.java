@@ -4,6 +4,7 @@ import dev.arbjerg.lavalink.client.LavalinkClient;
 import dev.arbjerg.lavalink.client.event.TrackEndEvent;
 import dev.arbjerg.lavalink.client.event.TrackStartEvent;
 import fr.fumbus.blackflash.lavalink.GuildMusicManager;
+import fr.fumbus.blackflash.lavalink.LoopMode;
 import fr.fumbus.blackflash.lavalink.TrackScheduler;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
@@ -201,6 +202,63 @@ class SlashCommandListenerTests {
 
         verify(lavalinkClient).getOrCreateLink(event.getGuild().getIdLong());
         verify(lavalinkClient.getOrCreateLink(event.getGuild().getIdLong())).loadItem("ytsearch:hello");
+    }
+
+    @Test
+    @SuppressWarnings("DataFlowIssue")
+    void onSlashCommandInteraction_loopCommand_cyclesLoopModeFromDisabledToTrackAndReplies() {
+        long guildId = 42L;
+        TrackScheduler scheduler = mock(TrackScheduler.class);
+        when(scheduler.getLoopMode()).thenReturn(LoopMode.DISABLED);
+        GuildMusicManager manager = mock(GuildMusicManager.class);
+        when(manager.getTrackScheduler()).thenReturn(scheduler);
+
+        SlashCommandInteractionEvent event = mockGuildSlashEvent(COMMAND_LOOP);
+        when(event.getGuild().getIdLong()).thenReturn(guildId);
+        listener.getMusicManagers().put(guildId, manager);
+
+        listener.onSlashCommandInteraction(event);
+
+        verify(scheduler).setLoopMode(LoopMode.TRACK);
+        verify(event).reply("🔂 Loop track enabled!");
+    }
+
+    @Test
+    @SuppressWarnings("DataFlowIssue")
+    void onSlashCommandInteraction_loopCommand_cyclesLoopModeFromTrackToQueueAndReplies() {
+        long guildId = 42L;
+        TrackScheduler scheduler = mock(TrackScheduler.class);
+        when(scheduler.getLoopMode()).thenReturn(LoopMode.TRACK);
+        GuildMusicManager manager = mock(GuildMusicManager.class);
+        when(manager.getTrackScheduler()).thenReturn(scheduler);
+
+        SlashCommandInteractionEvent event = mockGuildSlashEvent(COMMAND_LOOP);
+        when(event.getGuild().getIdLong()).thenReturn(guildId);
+        listener.getMusicManagers().put(guildId, manager);
+
+        listener.onSlashCommandInteraction(event);
+
+        verify(scheduler).setLoopMode(LoopMode.QUEUE);
+        verify(event).reply("🔁 Loop queue enabled!");
+    }
+
+    @Test
+    @SuppressWarnings("DataFlowIssue")
+    void onSlashCommandInteraction_loopCommand_cyclesLoopModeFromQueueToDisabledAndReplies() {
+        long guildId = 42L;
+        TrackScheduler scheduler = mock(TrackScheduler.class);
+        when(scheduler.getLoopMode()).thenReturn(LoopMode.QUEUE);
+        GuildMusicManager manager = mock(GuildMusicManager.class);
+        when(manager.getTrackScheduler()).thenReturn(scheduler);
+
+        SlashCommandInteractionEvent event = mockGuildSlashEvent(COMMAND_LOOP);
+        when(event.getGuild().getIdLong()).thenReturn(guildId);
+        listener.getMusicManagers().put(guildId, manager);
+
+        listener.onSlashCommandInteraction(event);
+
+        verify(scheduler).setLoopMode(LoopMode.DISABLED);
+        verify(event).reply("Loop disabled!");
     }
 
     @Test

@@ -5,8 +5,13 @@
 [![Spring Boot 4.0.5](https://img.shields.io/badge/Spring%20Boot-4.0.5-brightgreen.svg)](https://spring.io/projects/spring-boot)
 [![Build](https://github.com/PoulpY2K/blackflash/actions/workflows/maven.yml/badge.svg?branch=main)](https://github.com/PoulpY2K/blackflash/actions/workflows/maven.yml)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=poulpy2k_blackflash&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=poulpy2k_blackflash)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=poulpy2k_blackflash&metric=coverage)](https://sonarcloud.io/summary/new_code?id=poulpy2k_blackflash)
 
-**Blackflash** is a Discord music bot built with **Spring Boot 4.0.5** and **Java 25**. It uses [JDA v6.4.1](https://github.com/discord-jda/JDA) for Discord API integration and [Lavalink Client v3.4.0](https://github.com/lavalink-devs/lavalink-client) for high-quality audio streaming via an external [Lavalink v4](https://github.com/lavalink-devs/Lavalink) node.
+
+**Blackflash** is a Discord music bot built with **Spring Boot 4.0.5** and **Java 25**. It
+uses [JDA v6.4.1](https://github.com/discord-jda/JDA) for Discord API integration
+and [Lavalink Client v3.4.0](https://github.com/lavalink-devs/lavalink-client) for high-quality audio streaming via an
+external [Lavalink v4](https://github.com/lavalink-devs/Lavalink) node.
 
 --
 
@@ -22,16 +27,16 @@
 
 ## 🎮 Slash Commands
 
-| Command    | Description                                        | Status         |
-|------------|----------------------------------------------------|----------------|
-| `/join`    | Join the voice channel                             | ✅ Implemented  |
-| `/play`    | Play a song or playlist from a URL or search query | ✅ Implemented  |
-| `/stop`    | Stop playback and clear the queue                  | ✅ Implemented  |
-| `/leave`   | Leave the voice channel                            | ✅ Implemented  |
-| `/help`    | Display help information                           | 🚧 Planned     |
-| `/skip`    | Skip the current track                             | 🚧 Planned     |
-| `/loop`    | Loop the current track or playlist                 | 🚧 Planned     |
-| `/shuffle` | Shuffle the playlist                               | 🚧 Planned     |
+| Command    | Description                                        | Status        |
+|------------|----------------------------------------------------|---------------|
+| `/join`    | Join the voice channel                             | ✅ Implemented |
+| `/play`    | Play a song or playlist from a URL or search query | ✅ Implemented |
+| `/stop`    | Stop playback and clear the queue                  | ✅ Implemented |
+| `/leave`   | Leave the voice channel                            | ✅ Implemented |
+| `/loop`    | Cycle loop mode: track → queue → disabled          | ✅ Implemented |
+| `/help`    | Display help information                           | 🚧 Planned    |
+| `/skip`    | Skip the current track                             | 🚧 Planned    |
+| `/shuffle` | Shuffle the playlist                               | 🚧 Planned    |
 
 ---
 
@@ -82,7 +87,8 @@ ELASTIC_PASSWORD=your-elastic-password
 docker compose -f docker-compose-dev.yml up -d
 ```
 
-This starts a Lavalink v4 (Alpine) container on `127.0.0.1:2333` with the configuration from `lavalink/application.yml` and pre-downloaded plugins.
+This starts a Lavalink v4 (Alpine) container on `127.0.0.1:2333` with the configuration from `lavalink/application.yml`
+and pre-downloaded plugins.
 
 ### 4. Build and run
 
@@ -126,8 +132,10 @@ Spring Boot DevTools is included — the application auto-restarts on classpath 
 
 ### Key Design Decisions
 
-- **Per-guild music managers** — each Discord guild gets its own `GuildMusicManager` with an independent `TrackScheduler` and queue
-- **External Lavalink node** — audio processing is offloaded to a dedicated Lavalink v4 server communicating over WebSocket
+- **Per-guild music managers** — each Discord guild gets its own `GuildMusicManager` with an independent
+  `TrackScheduler` and queue
+- **External Lavalink node** — audio processing is offloaded to a dedicated Lavalink v4 server communicating over
+  WebSocket
 - **Log4j2** — configured via `spring-boot-starter-log4j2` (not SLF4J + Logback)
 - **Virtual threads** — enabled via `spring.threads.virtual.enabled: true` for efficient concurrency
 - **Separate management port** — actuator endpoints are served on port `54001` (configured via `management.server.port`)
@@ -184,8 +192,8 @@ Tests cover all major components:
 - Discord configuration (JDA initialization, error handling)
 - Lavalink configuration (node setup, event subscriptions)
 - ObjectMapper configuration (trimming, snake_case, null handling, JSR-310)
-- Slash command listener and registry
-- Audio loader, guild music manager, track scheduler
+- Slash command listener (join, play, stop, leave, loop — including all three loop-cycle transitions) and registry
+- Audio loader, guild music manager, track scheduler (including all loop modes and end-reason handling)
 - UserData record equality
 
 ---
@@ -196,12 +204,12 @@ Tests cover all major components:
 
 Available at `http://localhost:54001/actuator/`:
 
-| Endpoint              | Description                  |
-|-----------------------|------------------------------|
-| `/actuator/health`    | Health status with details   |
-| `/actuator/info`      | Application information      |
-| `/actuator/metrics`   | Application metrics          |
-| `/actuator/caches`    | Cache statistics             |
+| Endpoint            | Description                |
+|---------------------|----------------------------|
+| `/actuator/health`  | Health status with details |
+| `/actuator/info`    | Application information    |
+| `/actuator/metrics` | Application metrics        |
+| `/actuator/caches`  | Cache statistics           |
 
 ### Health Probes
 
