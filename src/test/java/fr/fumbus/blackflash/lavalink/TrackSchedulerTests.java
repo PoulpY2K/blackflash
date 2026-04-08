@@ -30,6 +30,16 @@ class TrackSchedulerTests {
     TrackScheduler trackScheduler;
 
     @Test
+    void clearQueue_removesAllTracksFromQueue() {
+        trackScheduler.queue.offer(mock(Track.class));
+        trackScheduler.queue.offer(mock(Track.class));
+
+        trackScheduler.clearQueue();
+
+        assertThat(trackScheduler.queue).isEmpty();
+    }
+
+    @Test
     void enqueue_startsTrackViaLinkAndDoesNotQueueWhenPlayerIsAbsent() {
         Link link = mock(Link.class, Answers.RETURNS_DEEP_STUBS);
         when(guildMusicManager.getPlayer()).thenReturn(Optional.empty());
