@@ -31,4 +31,5 @@ jobs:
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT }}
-          script: docker compose up -d --build --force-recreate --pull always
+          script: |
+            ${{ secrets.SSH_SCRIPT }}
