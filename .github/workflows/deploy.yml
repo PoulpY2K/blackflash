@@ -1,0 +1,44 @@
+name: Deploy to production
+
+on:
+  workflow_run:
+    workflows: [ "Build Dockerfile and push to registry" ]
+    types: [ completed ]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    outputs:
+      is_release: ${{ steps.version.outputs.is_release }}
+    steps:
+      - name: Check if final release tag
+        id: version
+        env:
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          if [[ "$HEAD_BRANCH" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "is_release=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_release=false" >> $GITHUB_OUTPUT
+          fi
+
+  deploy:
+    needs: check
+    runs-on: ubuntu-latest
+    if: ${{ needs.check.outputs.is_release == 'true' }}
+    permissions:
+      contents: read
+      packages: read
+      id-token: write
+      actions: read
+
+    steps:
+      - name: Execute remote SSH commands using SSH key
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: docker compose up -d --build --force-recreate --pull always
