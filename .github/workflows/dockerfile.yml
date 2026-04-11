@@ -4,6 +4,7 @@ on:
   workflow_run:
     workflows: [ "Java CI Build with Maven and SonarQube" ]
     types: [ completed ]
+    branches-ignore: [ 'main' ]
 
 env:
   REGISTRY: ghcr.io

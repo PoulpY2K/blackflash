@@ -3,7 +3,7 @@ name: Deploy to production
 on:
   workflow_run:
     workflows: [ "Build Dockerfile and push to registry" ]
-    types: [ completed ]
+    branches: [ v[0-9]+.[0-9]+.[0-9]+ ]
 
 jobs:
   deploy:
@@ -11,19 +11,6 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
-      - name: Resolve version tag for this commit
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          TAG=$(gh api "repos/${{ github.repository }}/tags" \
-            --jq '.[] | select(.commit.sha == "${{ github.event.workflow_run.head_sha }}") | .name' \
-            | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
-          if [ -z "$TAG" ]; then
-            echo "No v*.*.* tag found — skipping deployment."
-            exit 1
-          fi
-          echo "Deploying version $TAG"
-
       - name: Execute remote SSH commands using SSH key
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2
         with:
