@@ -1,4 +1,4 @@
-package fr.fumbus.blackflash.lavalink;
+package fr.fumbus.blackflash.music.player;
 
 import dev.arbjerg.lavalink.client.Link;
 import dev.arbjerg.lavalink.client.event.TrackEndEvent;
@@ -6,6 +6,7 @@ import dev.arbjerg.lavalink.client.event.TrackStartEvent;
 import dev.arbjerg.lavalink.client.player.LavalinkPlayer;
 import dev.arbjerg.lavalink.client.player.Track;
 import dev.arbjerg.lavalink.protocol.v4.Message;
+import fr.fumbus.blackflash.music.manager.GuildMusicManager;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Answers;
@@ -37,6 +38,30 @@ class TrackSchedulerTests {
         trackScheduler.clearQueue();
 
         assertThat(trackScheduler.queue).isEmpty();
+    }
+
+    @Test
+    void skip_startsNextQueueTrackWhenQueueIsNotEmpty() {
+        Link link = mock(Link.class, Answers.RETURNS_DEEP_STUBS);
+        when(guildMusicManager.getLink()).thenReturn(Optional.of(link));
+        Track nextTrack = mock(Track.class, Answers.RETURNS_DEEP_STUBS);
+        trackScheduler.queue.offer(nextTrack);
+
+        trackScheduler.skip();
+
+        assertThat(trackScheduler.queue).isEmpty();
+        verify(link).createOrUpdatePlayer();
+    }
+
+    @Test
+    void skip_stopsPlaybackWhenQueueIsEmpty() {
+        Link link = mock(Link.class, Answers.RETURNS_DEEP_STUBS);
+        when(guildMusicManager.getLink()).thenReturn(Optional.of(link));
+
+        trackScheduler.skip();
+
+        assertThat(trackScheduler.queue).isEmpty();
+        verify(link).createOrUpdatePlayer();
     }
 
     @Test
@@ -224,3 +249,4 @@ class TrackSchedulerTests {
         verify(link).createOrUpdatePlayer();
     }
 }
+

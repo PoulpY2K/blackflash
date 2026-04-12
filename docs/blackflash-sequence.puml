@@ -13,16 +13,17 @@ skinparam ParticipantBorderColor #388E3C
 actor       "Discord User"         as User
 participant "Discord API"          as Discord
 box "Spring Application" #F3F4F6
-  participant "BlackflashApplication"    as App
+  participant "BlackflashApplication"      as App
   participant "ObjectMapper\nConfiguration" as ObjMapper
-  participant "LavalinkConfiguration"    as LavalinkConfig
-  participant "SlashCommand\nRegistry"   as Registry
-  participant "SlashCommand\nListener"   as Listener
-  participant "GuildMusic\nManager"      as MusicManager
-  participant "TrackScheduler"           as Scheduler
-  participant "AudioLoader"              as AudioLoader
-  participant "DiscordConfiguration"     as DiscordConfig
-  participant "Spring Actuator"          as Actuator
+  participant "LavalinkConfiguration"      as LavalinkConfig
+  participant "SlashCommand\nListener"     as Listener
+  participant "SlashCommand\nHandler"      as Handler
+  participant "GuildMusicManager\nRegistry" as Registry
+  participant "GuildMusic\nManager"        as MusicManager
+  participant "TrackScheduler"             as Scheduler
+  participant "AudioLoader"                as AudioLoader
+  participant "DiscordConfiguration"       as DiscordConfig
+  participant "Spring Actuator"            as Actuator
 end box
 participant "LavalinkClient\n(dev.arbjerg)" as LLClient
 participant "Lavalink v4 Node\n(Docker :2333)" as LLNode
@@ -57,35 +58,35 @@ LLNode --> LLClient : connection established
 LavalinkConfig -> LLClient : node.on(TrackStartEvent)\n  .subscribe(log info)
 LavalinkConfig -> LLClient : on(ReadyEvent)\n  .subscribe(log info)
 LavalinkConfig -> LLClient : on(StatsEvent)\n  .subscribe(log info)
-LavalinkConfig -> LLClient : on(EmittedEvent)\n  .subscribe(log info +\n  debug TrackStartEvent)
+LavalinkConfig -> LLClient : on(EmittedEvent)\n  .subscribe(log info)
 LLNode --> LLClient : ReadyEvent
 LLClient -> LLClient : log "Node '<name>' is ready,\n  session id is '<id>'!"
 LavalinkConfig --> App : LavalinkClient bean ready
 deactivate LavalinkConfig
 
-' --- Bean: SlashCommandRegistry ---
-App -> Registry : create @Component SlashCommandRegistry
+' --- Bean: GuildMusicManagerRegistry ---
+App -> Registry : create @Component GuildMusicManagerRegistry\n  (inject LavalinkClient)
 activate Registry
-Registry -> Registry : build List<CommandData>:\n/help, /join, /play (query),\n/skip, /loop, /shuffle,\n/leave, /stop\n[all GUILD context only]
-Registry --> App : SlashCommandRegistry bean ready
+Registry -> Registry : managers = new ConcurrentHashMap<>()
+Registry --> App : GuildMusicManagerRegistry bean ready
 deactivate Registry
 
 ' --- Bean: SlashCommandListener ---
-App -> Listener : create @Component SlashCommandListener\n  (inject LavalinkClient,\n   SlashCommandRegistry)
+App -> Listener : create @Component SlashCommandListener\n  (inject LavalinkClient,\n   GuildMusicManagerRegistry,\n   List<SlashCommandHandler>)
 activate Listener
-Listener -> Listener : musicManagers =\n  new ConcurrentHashMap<>()
+note right of Listener : Each SlashCommandHandler impl (@Component)\nis auto-collected by Spring.\nEach handler defines its own CommandData.
 Listener -> Listener : @PostConstruct init()
-Listener -> LLClient : on(TrackStartEvent)\n  .subscribe(delegate to guild's\n  TrackScheduler)
-Listener -> LLClient : on(TrackEndEvent)\n  .subscribe(delegate to guild's\n  TrackScheduler)
+Listener -> LLClient : on(TrackStartEvent)\n  .subscribe(delegate to guild's\n  TrackScheduler via registry)
+Listener -> LLClient : on(TrackEndEvent)\n  .subscribe(delegate to guild's\n  TrackScheduler via registry)
 Listener --> App : SlashCommandListener bean ready
 deactivate Listener
 
 ' --- Bean: DiscordConfiguration ---
-App -> DiscordConfig : create @Configuration DiscordConfiguration\n  (inject SlashCommandListener,\n   LavalinkClient)
+App -> DiscordConfig : create @Configuration DiscordConfiguration\n  (inject SlashCommandListener, LavalinkClient)
 activate DiscordConfig
 DiscordConfig -> DiscordConfig : @PostConstruct initializeJDA()
 DiscordConfig -> DiscordConfig : log "Initializing JDA,\n  registering listeners..."
-DiscordConfig -> Discord : JDABuilder.createDefault(token)\n  .setVoiceDispatchInterceptor(\n    new JDAVoiceUpdateListener(lavalink))\n  .enableIntents(GUILD_MESSAGE_REACTIONS,\n    GUILD_MEMBERS, GUILD_PRESENCES,\n    GUILD_MESSAGES, GUILD_VOICE_STATES)\n  .enableCache(VOICE_STATE,\n    ONLINE_STATUS, ACTIVITY)\n  .setActivity(Activity.listening(activity))\n  .setAutoReconnect(true)\n  .setMemberCachePolicy(ALL)\n  .setChunkingFilter(include(100))\n  .addEventListeners(listener)\n  .setAudioModuleConfig(\n    new AudioModuleConfig()\n      .withDaveSessionFactory(\n        new JDaveSessionFactory()))\n  .build().awaitReady()
+DiscordConfig -> Discord : JDABuilder.createDefault(token)\n  .setEventPool(\n    Executors.newVirtualThreadPerTaskExecutor(), true)\n  .setVoiceDispatchInterceptor(\n    new JDAVoiceUpdateListener(lavalink))\n  .enableIntents(GUILD_MESSAGE_REACTIONS,\n    GUILD_MEMBERS, GUILD_PRESENCES,\n    GUILD_MESSAGES, GUILD_VOICE_STATES)\n  .enableCache(VOICE_STATE, ONLINE_STATUS, ACTIVITY)\n  .setActivity(Activity.listening(activity))\n  .setAutoReconnect(true)\n  .setMemberCachePolicy(ALL)\n  .setChunkingFilter(include(100))\n  .addEventListeners(listener)\n  .setAudioModuleConfig(\n    new AudioModuleConfig()\n      .withDaveSessionFactory(\n        new JDaveSessionFactory()))\n  .build().awaitReady()
 activate Discord
 Discord --> DiscordConfig : JDA instance (ready)
 deactivate Discord
@@ -98,11 +99,12 @@ note over Listener, Discord : Commands are registered when\nSlashCommandListener
 Discord -> Listener : ReadyEvent
 activate Listener
 Listener -> Listener : log "{bot} is ready!"
-Listener -> Discord : jda.updateCommands()\n  .addCommands(registry.getCommands())\n  .queue()
+Listener -> Discord : jda.updateCommands()\n  .addCommands(\n    slashCommandHandlers.stream()\n      .map(SlashCommandHandler::commandData)\n      .toList())\n  .queue()
+note right of Discord : Registers: /help, /join, /play (query),\n/skip, /loop, /shuffle, /leave, /stop\n(all GUILD context — each from its own handler)
 Discord --> Listener : commands registered (async)
 deactivate Listener
 
-App --> App : Application context started\n(virtual threads enabled)
+App --> App : Application context started\n(JDA events: one virtual thread per event)
 deactivate App
 
 ' ═══════════════════════════════════════════════════════
@@ -119,15 +121,28 @@ LLClient -> LLClient : log "Node '<name>' has stats:\n  playing=X/Y (link count=
 User -> Discord : /join
 Discord -> Listener : SlashCommandInteractionEvent
 activate Listener
-Listener -> Listener : joinChannel(event)
-Listener -> Listener : get member voice state
-Listener -> Discord : jda.getDirectAudioController()\n  .connect(memberVoiceChannel)
-Listener -> MusicManager ** : getOrCreateMusicManager(guildId)\n  → new GuildMusicManager(guildId, lavalink)
-activate MusicManager
-MusicManager -> Scheduler ** : new TrackScheduler(this)
-MusicManager --> Listener : GuildMusicManager
-deactivate MusicManager
-Listener -> Discord : reply("Joining your channel!")
+note right of Listener : Guard: member must be in a voice channel.\nrequiresBotInVoiceChannel=false —\njoin manages its own bot-presence check.
+Listener -> Handler : dispatch → SlashJoinCommandHandler\n  handle(event, guild)
+activate Handler
+
+alt Bot already in voice channel
+  Handler -> Discord : reply(MESSAGE_BOT_ALREADY_IN_VOICE_CHANNEL)\n  .setEphemeral(true).queue()
+else Bot NOT in voice channel
+  Handler -> Handler : joinChannel(event)
+  Handler -> Discord : jda.getDirectAudioController()\n  .connect(memberVoiceChannel)
+  Handler -> Registry : getOrCreate(guildId)
+  activate Registry
+  Registry -> MusicManager ** : new GuildMusicManager(guildId, lavalink)
+  activate MusicManager
+  MusicManager -> Scheduler ** : new TrackScheduler(this)
+  MusicManager --> Registry : GuildMusicManager
+  deactivate MusicManager
+  Registry --> Handler : GuildMusicManager
+  deactivate Registry
+  Handler -> Discord : reply("Joining your channel!").queue()
+end
+
+deactivate Handler
 deactivate Listener
 
 ' ═══════════════════════════════════════════════════════
@@ -137,20 +152,22 @@ deactivate Listener
 User -> Discord : /play query:"<track URL or search>"
 Discord -> Listener : SlashCommandInteractionEvent
 activate Listener
+note right of Listener : requiresBotInVoiceChannel=false —\nplay joins automatically if needed.
+Listener -> Handler : dispatch → SlashPlayCommandHandler\n  handle(event, guild)
+activate Handler
 
 alt Bot already in voice channel
-  Listener -> Discord : event.deferReply(false).queue()
+  Handler -> Discord : event.deferReply(false).queue()
 else Bot NOT in voice channel
-  Listener -> Listener : joinChannel(event)\n  (connect + reply)
+  Handler -> Handler : slashJoinCommandHandler.joinChannel(event)
 end
 
-Listener -> Listener : query = event.getOption("query")
-Listener -> LLClient : lavalink.getOrCreateLink(guildId)
-LLClient --> Listener : Link
-Listener -> Listener : getOrCreateMusicManager(guildId)
-Listener -> AudioLoader ** : new AudioLoader(event, manager)
-Listener -> LLClient : link.loadItem(query)\n  .subscribe(audioLoader)
+Handler -> Registry : getOrCreate(guildId)
+Registry --> Handler : GuildMusicManager (manager)
+Handler -> AudioLoader ** : new AudioLoader(event, manager)
+Handler -> LLClient : lavalink.getOrCreateLink(guildId)\n  .loadItem(query)\n  .subscribe(audioLoader)
 LLClient -> LLNode : REST POST /v4/loadtracks\n  ?identifier=<query>
+deactivate Handler
 deactivate Listener
 
 alt Track loaded
@@ -160,25 +177,23 @@ alt Track loaded
   AudioLoader -> AudioLoader : track.setUserData(\n  new UserData(userId))
   AudioLoader -> Scheduler : enqueue(track)
   activate Scheduler
-
   alt No current track playing
     Scheduler -> LLClient : link.createOrUpdatePlayer()\n  .setTrack(track)\n  .setVolume(50)\n  .setEndTime(track.length)\n  .subscribe()
-    LLClient -> LLNode : WebSocket PLAY\n  (guildId, track)
-    LLNode -> Discord : audio stream\n  (UDP / voice gateway)
+    LLClient -> LLNode : WebSocket PLAY (guildId, track)
+    LLNode -> Discord : audio stream (UDP / voice gateway)
     Discord -> User : 🎵 audio playback
   else Track already playing
     Scheduler -> Scheduler : queue.offer(track)
   end
   deactivate Scheduler
-
-  AudioLoader -> Discord : hook.sendMessage("Added to queue:\n  {title}\nRequested by: <@{id}>")
+  AudioLoader -> Discord : hook.sendMessage(\n  "Added to queue: {title}\nRequested by: <@{id}>")
   deactivate AudioLoader
 
 else Playlist loaded
   LLNode --> LLClient : PlaylistLoaded result
   LLClient -> AudioLoader : onPlaylistLoaded(result)
   activate AudioLoader
-  AudioLoader -> Discord : hook.sendMessage("Added N\n  tracks from {playlist}")
+  AudioLoader -> Discord : hook.sendMessage(\n  "Added N tracks from {playlist}")
   AudioLoader -> Scheduler : enqueuePlaylist(tracks)
   activate Scheduler
   Scheduler -> Scheduler : queue.addAll(tracks)
@@ -193,10 +208,10 @@ else Search result
   LLClient -> AudioLoader : onSearchResultLoaded(result)
   activate AudioLoader
   alt tracks not empty
-    AudioLoader -> Discord : hook.sendMessage("Adding to\n  queue: {firstTrack.title}")
+    AudioLoader -> Discord : hook.sendMessage(\n  "Adding to queue: {firstTrack.title}")
     AudioLoader -> Scheduler : enqueue(firstTrack)
   else empty results
-    AudioLoader -> Discord : hook.sendMessage(\n  "No tracks found!")
+    AudioLoader -> Discord : hook.sendMessage("No tracks found!")
   end
   deactivate AudioLoader
 
@@ -204,7 +219,7 @@ else No matches
   LLNode --> LLClient : NoMatches
   LLClient -> AudioLoader : noMatches()
   activate AudioLoader
-  AudioLoader -> Discord : hook.sendMessage(\n  "No matches found\n  for your input!")
+  AudioLoader -> Discord : hook.sendMessage(\n  "No matches found for your input!")
   deactivate AudioLoader
 
 else Load failed
@@ -216,19 +231,72 @@ else Load failed
 end
 
 ' ═══════════════════════════════════════════════════════
+== Slash Command: /skip ==
+' ═══════════════════════════════════════════════════════
+
+User -> Discord : /skip
+Discord -> Listener : SlashCommandInteractionEvent
+activate Listener
+Listener -> Handler : dispatch → SlashSkipCommandHandler\n  handle(event, guild)
+activate Handler
+Handler -> Registry : getOrCreate(guildId)
+Registry --> Handler : GuildMusicManager (manager)
+Handler -> Scheduler : manager.getTrackScheduler().skip()
+activate Scheduler
+alt Queue has a next track
+  Scheduler -> LLClient : link.createOrUpdatePlayer()\n  .setTrack(next)\n  .setVolume(50)\n  .setEndTime(next.length)\n  .subscribe()
+else Queue is empty
+  Scheduler -> LLClient : link.createOrUpdatePlayer()\n  .setTrack(null)\n  .subscribe()
+end
+deactivate Scheduler
+Handler -> Discord : reply("Skipped the current track!").queue()
+deactivate Handler
+deactivate Listener
+
+' ═══════════════════════════════════════════════════════
+== Slash Command: /loop ==
+' ═══════════════════════════════════════════════════════
+
+User -> Discord : /loop
+Discord -> Listener : SlashCommandInteractionEvent
+activate Listener
+Listener -> Handler : dispatch → SlashLoopCommandHandler\n  handle(event, guild)
+activate Handler
+Handler -> Registry : getOrCreate(guildId)
+Registry --> Handler : GuildMusicManager (manager)
+Handler -> Scheduler : getTrackScheduler().getLoopMode()
+Scheduler --> Handler : currentMode
+Handler -> Handler : newMode = currentMode.next()
+Handler -> Scheduler : setLoopMode(newMode)
+note right of Handler : Cycle: DISABLED → TRACK → QUEUE → DISABLED
+alt newMode = TRACK
+  Handler -> Discord : reply("🔂 Loop track enabled!").queue()
+else newMode = QUEUE
+  Handler -> Discord : reply("🔁 Loop queue enabled!").queue()
+else newMode = DISABLED
+  Handler -> Discord : reply("Loop disabled!").queue()
+end
+deactivate Handler
+deactivate Listener
+
+' ═══════════════════════════════════════════════════════
 == Slash Command: /stop ==
 ' ═══════════════════════════════════════════════════════
 
 User -> Discord : /stop
 Discord -> Listener : SlashCommandInteractionEvent
 activate Listener
-Listener -> MusicManager : getOrCreateMusicManager(guildId)\n  .stop()
+Listener -> Handler : dispatch → SlashStopCommandHandler\n  handle(event, guild)
+activate Handler
+Handler -> Registry : getOrCreate(guildId)
+Registry --> Handler : GuildMusicManager (manager)
+Handler -> MusicManager : manager.stop()
 activate MusicManager
-MusicManager -> Scheduler : queue.clear()
-MusicManager -> MusicManager : getPlayer()
+MusicManager -> Scheduler : trackScheduler.clearQueue()
 MusicManager -> LLClient : player.setPaused(false)\n  .setTrack(null)\n  .subscribe()
 deactivate MusicManager
-Listener -> Discord : reply("Stopped the\n  current track!")
+Handler -> Discord : reply("Stopped the current track!").queue()
+deactivate Handler
 deactivate Listener
 
 ' ═══════════════════════════════════════════════════════
@@ -238,9 +306,12 @@ deactivate Listener
 User -> Discord : /leave
 Discord -> Listener : SlashCommandInteractionEvent
 activate Listener
-Listener -> Discord : jda.getDirectAudioController()\n  .disconnect(guild)
-Listener -> Listener : musicManagers\n  .remove(guildId)
-Listener -> Discord : reply("Leaving\n  the channel!")
+Listener -> Handler : dispatch → SlashLeaveCommandHandler\n  handle(event, guild)
+activate Handler
+Handler -> Discord : jda.getDirectAudioController()\n  .disconnect(guild)
+Handler -> Registry : remove(guildId)
+Handler -> Discord : reply("Leaving the channel!").queue()
+deactivate Handler
 deactivate Listener
 
 ' ═══════════════════════════════════════════════════════
@@ -250,7 +321,8 @@ deactivate Listener
 LLNode -> LLClient : TrackStartEvent (guildId, track)
 LLClient -> Listener : TrackStartEvent subscriber (from init())
 activate Listener
-Listener -> Listener : musicManagers.get(guildId)
+Listener -> Registry : managers.get(guildId)
+Registry --> Listener : GuildMusicManager (if present)
 Listener -> Scheduler : trackScheduler.onTrackStart(event)
 activate Scheduler
 Scheduler -> Scheduler : log "[Guild guildId]\n  Track started: <title>"
@@ -258,7 +330,7 @@ deactivate Scheduler
 deactivate Listener
 
 ' Also fires to infrastructure listener in LavalinkConfiguration
-LLClient -> LLClient : EmittedEvent subscriber:\n  log "Node emitted TrackStartEvent"
+LLClient -> LLClient : EmittedEvent subscriber:\n  log "Node '<name>' emitted event"
 
 ' ═══════════════════════════════════════════════════════
 == Track Lifecycle: TrackEndEvent ==
@@ -267,11 +339,23 @@ LLClient -> LLClient : EmittedEvent subscriber:\n  log "Node emitted TrackStartE
 LLNode -> LLClient : TrackEndEvent (guildId, track, endReason)
 LLClient -> Listener : TrackEndEvent subscriber (from init())
 activate Listener
-Listener -> Listener : musicManagers.get(guildId)
+Listener -> Registry : managers.get(guildId)
+Registry --> Listener : GuildMusicManager (if present)
 Listener -> Scheduler : trackScheduler.onTrackEnd(event)
 activate Scheduler
-Scheduler -> Scheduler : log "[Guild guildId]\n  Track ended: <title>\n  (reason: <endReason>)"
-note right of Scheduler : Queue management\n(next track / loop)\nis TODO
+Scheduler -> Scheduler : log "[Guild guildId]\n  Track ended: <title> (reason: <endReason>)"
+
+alt endReason.getMayStartNext() = false
+  Scheduler -> Scheduler : return (STOPPED — do nothing)
+else loopMode = TRACK
+  Scheduler -> Scheduler : startTrack(endedTrack)
+else loopMode = QUEUE
+  Scheduler -> Scheduler : queue.offer(endedTrack)
+  Scheduler -> Scheduler : startTrack(queue.poll())
+else loopMode = DISABLED
+  Scheduler -> Scheduler : startNextQueueTrack()\n  (queue.poll() → startTrack if present)
+end
+
 deactivate Scheduler
 deactivate Listener
 

@@ -1,4 +1,4 @@
-package fr.fumbus.blackflash.lavalink;
+package fr.fumbus.blackflash.music.player;
 
 /**
  * Represents the loop state for a guild's music queue.
@@ -26,4 +26,5 @@ public enum LoopMode {
         return values[(ordinal() + 1) % values.length];
     }
 }
+
 

@@ -7,7 +7,6 @@
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=poulpy2k_blackflash&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=poulpy2k_blackflash)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=poulpy2k_blackflash&metric=coverage)](https://sonarcloud.io/summary/new_code?id=poulpy2k_blackflash)
 
-
 **Blackflash** is a Discord music bot built with **Spring Boot 4.0.5** and **Java 25**. It
 uses [JDA v6.4.1](https://github.com/discord-jda/JDA) for Discord API integration
 and [Lavalink Client v3.4.0](https://github.com/lavalink-devs/lavalink-client) for high-quality audio streaming via an
@@ -35,7 +34,7 @@ external [Lavalink v4](https://github.com/lavalink-devs/Lavalink) node.
 | `/leave`   | Leave the voice channel                            | ✅ Implemented |
 | `/loop`    | Cycle loop mode: track → queue → disabled          | ✅ Implemented |
 | `/help`    | Display help information                           | 🚧 Planned    |
-| `/skip`    | Skip the current track                             | 🚧 Planned    |
+| `/skip`    | Skip the current track                             | ✅ Implemented |
 | `/shuffle` | Shuffle the playlist                               | 🚧 Planned    |
 
 ---
@@ -137,7 +136,8 @@ Spring Boot DevTools is included — the application auto-restarts on classpath 
 - **External Lavalink node** — audio processing is offloaded to a dedicated Lavalink v4 server communicating over
   WebSocket
 - **Log4j2** — configured via `spring-boot-starter-log4j2` (not SLF4J + Logback)
-- **Virtual threads** — enabled via `spring.threads.virtual.enabled: true` for efficient concurrency
+- **Virtual threads** — enabled via `spring.threads.virtual.enabled: true` for Spring MVC / `@Async`; JDA events
+  dispatched on `Executors.newVirtualThreadPerTaskExecutor()` — every slash command gets its own virtual thread
 - **Separate management port** — actuator endpoints are served on port `54001` (configured via `management.server.port`)
 - **DAVE E2E audio encryption** — Discord's end-to-end encrypted voice protocol via `jdave-api`
 
@@ -192,7 +192,7 @@ Tests cover all major components:
 - Discord configuration (JDA initialization, error handling)
 - Lavalink configuration (node setup, event subscriptions)
 - ObjectMapper configuration (trimming, snake_case, null handling, JSR-310)
-- Slash command listener (join, play, stop, leave, loop — including all three loop-cycle transitions) and registry
+- Slash command listener (guards, dispatch) and all individual command handlers (join, play, stop, leave, loop, skip)
 - Audio loader, guild music manager, track scheduler (including all loop modes and end-reason handling)
 - UserData record equality
 

@@ -1,8 +1,9 @@
-package fr.fumbus.blackflash.lavalink;
+package fr.fumbus.blackflash.music.player;
 
 import dev.arbjerg.lavalink.client.event.TrackEndEvent;
 import dev.arbjerg.lavalink.client.event.TrackStartEvent;
 import dev.arbjerg.lavalink.client.player.Track;
+import fr.fumbus.blackflash.music.manager.GuildMusicManager;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -37,6 +38,24 @@ public class TrackScheduler {
     @Synchronized
     public void clearQueue() {
         queue.clear();
+    }
+
+    /**
+     * Skips the current track, bypassing the loop mode.
+     * Starts the next queued track, or stops playback if the queue is empty.
+     */
+    @Synchronized
+    public void skip() {
+        Track next = queue.poll();
+        if (nonNull(next)) {
+            startTrack(next);
+        } else {
+            guildMusicManager.getLink().ifPresent(
+                    link -> link.createOrUpdatePlayer()
+                            .setTrack(null)
+                            .subscribe()
+            );
+        }
     }
 
     @Synchronized
@@ -112,3 +131,4 @@ public class TrackScheduler {
         );
     }
 }
+

@@ -1,6 +1,7 @@
-package fr.fumbus.blackflash.lavalink;
+package fr.fumbus.blackflash.music.player;
 
 import dev.arbjerg.lavalink.client.player.*;
+import fr.fumbus.blackflash.music.manager.GuildMusicManager;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -110,3 +111,4 @@ class AudioLoaderTests {
         verify(event.getHook()).sendMessage("Failed to load track! Connection refused");
     }
 }
+

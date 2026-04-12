@@ -19,6 +19,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 
 import java.util.List;
+import java.util.concurrent.Executors;
 
 
 /**
@@ -54,6 +55,7 @@ public class DiscordConfiguration {
             log.info("Initializing JDA, registering listeners...");
 
             JDABuilder.createDefault(token)
+                    .setEventPool(Executors.newVirtualThreadPerTaskExecutor(), true)
                     .setVoiceDispatchInterceptor(new JDAVoiceUpdateListener(lavalink))
                     .enableIntents(enabledIntents)
                     .enableCache(CacheFlag.VOICE_STATE, CacheFlag.ONLINE_STATUS, CacheFlag.ACTIVITY)

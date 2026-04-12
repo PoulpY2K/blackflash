@@ -1,4 +1,4 @@
-package fr.fumbus.blackflash.lavalink;
+package fr.fumbus.blackflash.music.player;
 
 /**
  * @author Jérémy Laurent <poulpy2k>
@@ -6,3 +6,4 @@ package fr.fumbus.blackflash.lavalink;
  */
 public record UserData(long requester) {
 }
+

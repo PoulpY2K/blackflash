@@ -13,6 +13,8 @@ import tools.jackson.databind.cfg.DateTimeFeature;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.module.SimpleModule;
 
+import static java.util.Objects.nonNull;
+
 /**
  * @author Jérémy Laurent <poulpy2k>
  * @see "https://github.com/poulpy2k"
@@ -40,7 +42,7 @@ public class ObjectMapperConfiguration {
         @Override
         public String deserialize(JsonParser p, DeserializationContext ctxt) {
             String value = p.getValueAsString();
-            return value != null ? value.trim() : null;
+            return nonNull(value) ? value.trim() : null;
         }
     }
 }

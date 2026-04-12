@@ -1,7 +1,8 @@
-package fr.fumbus.blackflash.lavalink;
+package fr.fumbus.blackflash.music.player;
 
 import dev.arbjerg.lavalink.client.AbstractAudioLoadResultHandler;
 import dev.arbjerg.lavalink.client.player.*;
+import fr.fumbus.blackflash.music.manager.GuildMusicManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
@@ -73,3 +74,4 @@ public class AudioLoader extends AbstractAudioLoadResultHandler {
         event.getHook().sendMessage("Failed to load track! " + result.getException().getMessage()).queue();
     }
 }
+

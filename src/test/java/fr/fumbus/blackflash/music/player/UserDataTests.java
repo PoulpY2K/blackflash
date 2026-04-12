@@ -1,4 +1,4 @@
-package fr.fumbus.blackflash.lavalink;
+package fr.fumbus.blackflash.music.player;
 
 import org.junit.jupiter.api.Test;
 
@@ -24,3 +24,4 @@ class UserDataTests {
         assertThat(new UserData(1L)).isNotEqualTo(new UserData(2L));
     }
 }
+

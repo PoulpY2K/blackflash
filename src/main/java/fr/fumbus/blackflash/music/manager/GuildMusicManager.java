@@ -1,8 +1,9 @@
-package fr.fumbus.blackflash.lavalink;
+package fr.fumbus.blackflash.music.manager;
 
 import dev.arbjerg.lavalink.client.LavalinkClient;
 import dev.arbjerg.lavalink.client.Link;
 import dev.arbjerg.lavalink.client.player.LavalinkPlayer;
+import fr.fumbus.blackflash.music.player.TrackScheduler;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -51,3 +52,4 @@ public class GuildMusicManager {
         return getLink().map(Link::getCachedPlayer);
     }
 }
+

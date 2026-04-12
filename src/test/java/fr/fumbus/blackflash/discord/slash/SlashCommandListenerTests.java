@@ -3,9 +3,9 @@ package fr.fumbus.blackflash.discord.slash;
 import dev.arbjerg.lavalink.client.LavalinkClient;
 import dev.arbjerg.lavalink.client.event.TrackEndEvent;
 import dev.arbjerg.lavalink.client.event.TrackStartEvent;
-import fr.fumbus.blackflash.lavalink.GuildMusicManager;
-import fr.fumbus.blackflash.lavalink.LoopMode;
-import fr.fumbus.blackflash.lavalink.TrackScheduler;
+import fr.fumbus.blackflash.music.manager.GuildMusicManager;
+import fr.fumbus.blackflash.music.manager.GuildMusicManagerRegistry;
+import fr.fumbus.blackflash.music.player.TrackScheduler;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.session.ReadyEvent;
@@ -13,49 +13,86 @@ import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.commands.build.CommandData;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.*;
+import org.mockito.Answers;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.MockedConstruction;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Consumer;
 
-import static fr.fumbus.blackflash.discord.slash.SlashCommandConstants.*;
+import static fr.fumbus.blackflash.discord.slash.utils.SlashCommandConstants.MESSAGE_BOT_NOT_IN_VOICE_CHANNEL;
+import static fr.fumbus.blackflash.discord.slash.utils.SlashCommandConstants.MESSAGE_MEMBER_NOT_IN_VOICE_CHANNEL;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 @SuppressWarnings("DataFlowIssue")
 @ExtendWith(MockitoExtension.class)
 class SlashCommandListenerTests {
 
-    // RETURNS_DEEP_STUBS lets the reactive chain .on(...).subscribe(...) work without NPE
     @Mock(answer = Answers.RETURNS_DEEP_STUBS)
     LavalinkClient lavalinkClient;
 
-    @Mock
-    SlashCommandRegistry slashCommandRegistry;
 
-    @InjectMocks
+    @Mock(answer = Answers.RETURNS_DEEP_STUBS)
+    GuildMusicManagerRegistry musicManagerRegistry;
+
+    // Created manually so we can control the handler list per test
     SlashCommandListener listener;
 
     // ─── initial state ────────────────────────────────────────────────────────
 
-    @Test
-    void listener_hasExpectedInitialState() {
-        assertThat(listener).isInstanceOf(ListenerAdapter.class);
-        assertThat(listener.getMusicManagers()).isEmpty();
+    /**
+     * Stub a handler with the given command name and requiresBotInVoiceChannel value.
+     */
+    private static SlashCommandHandler handlerMock(boolean requiresBot) {
+        SlashCommandHandler handler = mock(SlashCommandHandler.class);
+        CommandData commandData = mock(CommandData.class);
+        when(commandData.getName()).thenReturn("mycommand");
+        when(handler.commandData()).thenReturn(commandData);
+        when(handler.requiresBotInVoiceChannel()).thenReturn(requiresBot);
+        return handler;
     }
 
     // ─── @PostConstruct init() ────────────────────────────────────────────────
 
-    @Test
-    void init_doesNotThrow() {
-        assertDoesNotThrow(() -> listener.init());
+    /**
+     * Creates a deep-stub slash event scoped to a guild with the given command name.
+     * The member is stubbed as being in a voice channel so the voice-channel guard
+     * in {@code onSlashCommandInteraction} does not short-circuit unrelated tests.
+     */
+    private static SlashCommandInteractionEvent mockGuildSlashEvent(String commandName) {
+        SlashCommandInteractionEvent event = mock(SlashCommandInteractionEvent.class, Answers.RETURNS_DEEP_STUBS);
+        when(event.getGuild()).thenReturn(mock(Guild.class, Answers.RETURNS_DEEP_STUBS));
+        when(event.getFullCommandName()).thenReturn(commandName);
+        when(event.getMember().getVoiceState().inAudioChannel()).thenReturn(true);
+        return event;
     }
 
     @Test
+    void listener_isInstanceOfListenerAdapter() {
+        listener = listenerWithNoHandlers();
+        assertThat(listener).isInstanceOf(ListenerAdapter.class);
+    }
+
+    @Test
+    void init_doesNotThrow() {
+        listener = listenerWithNoHandlers();
+        assertDoesNotThrow(() -> listener.init());
+    }
+
+    // ─── onReady ──────────────────────────────────────────────────────────────
+
+    @Test
     void init_trackStartEventHandler_delegatesToManagerOrDoesNothingWhenAbsent() {
+        when(musicManagerRegistry.getIfPresent(anyLong())).thenReturn(Optional.empty());
+        listener = listenerWithNoHandlers();
         listener.init();
 
         ArgumentCaptor<Consumer<TrackStartEvent>> captor = ArgumentCaptor.captor();
@@ -69,14 +106,19 @@ class SlashCommandListenerTests {
         TrackStartEvent event = mock(TrackStartEvent.class, Answers.RETURNS_DEEP_STUBS);
         when(event.getGuildId()).thenReturn(guildId);
         try (MockedConstruction<TrackScheduler> ctor = mockConstruction(TrackScheduler.class)) {
-            listener.getMusicManagers().put(guildId, new GuildMusicManager(guildId, lavalinkClient));
+            GuildMusicManager manager = new GuildMusicManager(guildId, lavalinkClient);
+            when(musicManagerRegistry.getIfPresent(guildId)).thenReturn(Optional.of(manager));
             captor.getValue().accept(event);
             verify(ctor.constructed().getFirst()).onTrackStart(event);
         }
     }
 
+    // ─── onSlashCommandInteraction — guards ───────────────────────────────────
+
     @Test
     void init_trackEndEventHandler_delegatesToManagerOrDoesNothingWhenAbsent() {
+        when(musicManagerRegistry.getIfPresent(anyLong())).thenReturn(Optional.empty());
+        listener = listenerWithNoHandlers();
         listener.init();
 
         ArgumentCaptor<Consumer<TrackEndEvent>> captor = ArgumentCaptor.captor();
@@ -90,44 +132,42 @@ class SlashCommandListenerTests {
         TrackEndEvent event = mock(TrackEndEvent.class, Answers.RETURNS_DEEP_STUBS);
         when(event.getGuildId()).thenReturn(guildId);
         try (MockedConstruction<TrackScheduler> ctor = mockConstruction(TrackScheduler.class)) {
-            listener.getMusicManagers().put(guildId, new GuildMusicManager(guildId, lavalinkClient));
+            GuildMusicManager manager = new GuildMusicManager(guildId, lavalinkClient);
+            when(musicManagerRegistry.getIfPresent(guildId)).thenReturn(Optional.of(manager));
             captor.getValue().accept(event);
             verify(ctor.constructed().getFirst()).onTrackEnd(event);
         }
     }
 
-    // ─── onReady ──────────────────────────────────────────────────────────────
-
     @Test
-    void onReady_registersCommandsFromRegistryViaJda() {
+    void onReady_registersCommandDataFromHandlers() {
+        CommandData commandData = mock(CommandData.class);
+        when(commandData.getName()).thenReturn("testcmd");
+        SlashCommandHandler handler = mock(SlashCommandHandler.class);
+        when(handler.commandData()).thenReturn(commandData);
+        listener = listenerWithHandlers(handler);
+        listener.init();
         ReadyEvent readyEvent = mock(ReadyEvent.class, Answers.RETURNS_DEEP_STUBS);
-        List<CommandData> commands = List.of(mock(CommandData.class));
-        when(slashCommandRegistry.getCommands()).thenReturn(commands);
 
         listener.onReady(readyEvent);
 
-        verify(readyEvent.getJDA().updateCommands()).addCommands(commands);
+        verify(readyEvent.getJDA().updateCommands()).addCommands(List.of(commandData));
     }
-
-    // ─── onSlashCommandInteraction ────────────────────────────────────────────
 
     @Test
     void onSlashCommandInteraction_throwsWhenGuildContextIsNull() {
-        // In real JDA, slash commands sent from a DM have getGuild() == null.
-        // getGuild() is the first guard in onSlashCommandInteraction, so it must throw
-        // IllegalStateException before any member or voice checks are reached.
+        listener = listenerWithNoHandlers();
         SlashCommandInteractionEvent event = mock(SlashCommandInteractionEvent.class, Answers.RETURNS_DEEP_STUBS);
         when(event.getGuild()).thenReturn(null);
 
         assertThrows(IllegalStateException.class, () -> listener.onSlashCommandInteraction(event));
     }
 
+    // ─── onSlashCommandInteraction — dispatch ─────────────────────────────────
+
     @Test
     void onSlashCommandInteraction_repliesEphemeralWhenMemberNotInVoiceChannel() {
-        // In real JDA, getMember().getVoiceState() returns null when the VOICE_STATE cache
-        // flag is off or when no voice state is cached for that member.
-        // checkIfMemberNotInVoiceChannel must treat null voice state as "not in channel"
-        // so the ephemeral guard triggers and no connect() call is ever attempted.
+        listener = listenerWithNoHandlers();
         SlashCommandInteractionEvent event = mock(SlashCommandInteractionEvent.class, Answers.RETURNS_DEEP_STUBS);
         when(event.getMember().getVoiceState()).thenReturn(null);
 
@@ -139,181 +179,9 @@ class SlashCommandListenerTests {
     }
 
     @Test
-    void onSlashCommandInteraction_joinCommand_connectsAndRepliesWhenMemberInVoiceChannel() {
-        SlashCommandInteractionEvent event = mockGuildSlashEvent(COMMAND_JOIN);
-
-        listener.onSlashCommandInteraction(event);
-
-        verify(event.getJDA().getDirectAudioController()).connect(event.getMember().getVoiceState().getChannel());
-        verify(event).reply("Joining your channel!");
-    }
-
-    @Test
-    void onSlashCommandInteraction_joinCommand_repliesEphemeralWhenBotAlreadyInVoiceChannel() {
-        SlashCommandInteractionEvent event = mockGuildSlashEvent(COMMAND_JOIN);
-        when(event.getGuild().getSelfMember().getVoiceState().inAudioChannel()).thenReturn(true);
-
-        listener.onSlashCommandInteraction(event);
-
-        verify(event).reply(MESSAGE_BOT_ALREADY_IN_VOICE_CHANNEL);
-        verify(event.reply(MESSAGE_BOT_ALREADY_IN_VOICE_CHANNEL)).setEphemeral(true);
-        verify(event.getJDA().getDirectAudioController(), never()).connect(any());
-    }
-
-    @Test
-    void onSlashCommandInteraction_stopCommand_stopsPlaybackAndReplies() {
-        long guildId = 42L;
-        GuildMusicManager manager = mock(GuildMusicManager.class);
-        SlashCommandInteractionEvent event = mockGuildSlashEvent(COMMAND_STOP);
-        when(event.getGuild().getIdLong()).thenReturn(guildId);
-        when(event.getGuild().getSelfMember().getVoiceState().inAudioChannel()).thenReturn(true);
-        listener.getMusicManagers().put(guildId, manager);
-
-        listener.onSlashCommandInteraction(event);
-
-        verify(manager).stop();
-        verify(event).reply("Stopped the current track!");
-    }
-
-    @Test
-    void onSlashCommandInteraction_stopCommand_repliesEphemeralWhenBotNotInVoiceChannel() {
-        SlashCommandInteractionEvent event = mockGuildSlashEvent(COMMAND_STOP);
-
-        listener.onSlashCommandInteraction(event);
-
-        verify(event).reply(MESSAGE_BOT_NOT_IN_VOICE_CHANNEL);
-        verify(event.reply(MESSAGE_BOT_NOT_IN_VOICE_CHANNEL)).setEphemeral(true);
-    }
-
-    @Test
-    void onSlashCommandInteraction_leaveCommand_disconnectsRemovesMusicManagerAndReplies() {
-        long guildId = 42L;
-        SlashCommandInteractionEvent event = mockGuildSlashEvent(COMMAND_LEAVE);
-        when(event.getGuild().getIdLong()).thenReturn(guildId);
-        when(event.getGuild().getSelfMember().getVoiceState().inAudioChannel()).thenReturn(true);
-        listener.getMusicManagers().put(guildId, mock(GuildMusicManager.class));
-
-        listener.onSlashCommandInteraction(event);
-
-        assertThat(listener.getMusicManagers()).doesNotContainKey(guildId);
-        verify(event.getJDA().getDirectAudioController()).disconnect(event.getGuild());
-        verify(event).reply("Leaving the channel!");
-    }
-
-    @Test
-    void onSlashCommandInteraction_leaveCommand_repliesEphemeralWhenBotNotInVoiceChannel() {
-        SlashCommandInteractionEvent event = mockGuildSlashEvent(COMMAND_LEAVE);
-
-        listener.onSlashCommandInteraction(event);
-
-        verify(event).reply(MESSAGE_BOT_NOT_IN_VOICE_CHANNEL);
-        verify(event.reply(MESSAGE_BOT_NOT_IN_VOICE_CHANNEL)).setEphemeral(true);
-        assertThat(listener.getMusicManagers()).isEmpty();
-    }
-
-    @Test
-    void onSlashCommandInteraction_playCommand_defersReplyWhenBotIsAlreadyInVoiceChannel() {
-        SlashCommandInteractionEvent event = mockGuildSlashEvent(COMMAND_PLAY);
-        when(event.getGuild().getSelfMember().getVoiceState().inAudioChannel()).thenReturn(true);
-        listener.getMusicManagers().put(event.getGuild().getIdLong(), mock(GuildMusicManager.class));
-
-        listener.onSlashCommandInteraction(event);
-
-        verify(event).deferReply(false);
-    }
-
-    @Test
-    void onSlashCommandInteraction_playCommand_joinsChannelWhenBotIsNotInVoiceChannel() {
-        SlashCommandInteractionEvent event = mockGuildSlashEvent(COMMAND_PLAY);
-        when(event.getGuild().getSelfMember().getVoiceState().inAudioChannel()).thenReturn(false);
-
-        listener.onSlashCommandInteraction(event);
-
-        verify(event).reply("Joining your channel!");
-    }
-
-    @Test
-    void onSlashCommandInteraction_playCommand_loadsQueryViaLavalink() {
-        SlashCommandInteractionEvent event = mockGuildSlashEvent(COMMAND_PLAY);
-        when(event.getGuild().getSelfMember().getVoiceState().inAudioChannel()).thenReturn(true);
-        when(event.getOption("query").getAsString()).thenReturn("ytsearch:hello");
-        listener.getMusicManagers().put(event.getGuild().getIdLong(), mock(GuildMusicManager.class));
-
-        listener.onSlashCommandInteraction(event);
-
-        verify(lavalinkClient).getOrCreateLink(event.getGuild().getIdLong());
-        verify(lavalinkClient.getOrCreateLink(event.getGuild().getIdLong())).loadItem("ytsearch:hello");
-    }
-
-    @Test
-    void onSlashCommandInteraction_loopCommand_cyclesLoopModeFromDisabledToTrackAndReplies() {
-        long guildId = 42L;
-        TrackScheduler scheduler = mock(TrackScheduler.class);
-        when(scheduler.getLoopMode()).thenReturn(LoopMode.DISABLED);
-        GuildMusicManager manager = mock(GuildMusicManager.class);
-        when(manager.getTrackScheduler()).thenReturn(scheduler);
-
-        SlashCommandInteractionEvent event = mockGuildSlashEvent(COMMAND_LOOP);
-        when(event.getGuild().getIdLong()).thenReturn(guildId);
-        when(event.getGuild().getSelfMember().getVoiceState().inAudioChannel()).thenReturn(true);
-        listener.getMusicManagers().put(guildId, manager);
-
-        listener.onSlashCommandInteraction(event);
-
-        verify(scheduler).setLoopMode(LoopMode.TRACK);
-        verify(event).reply("🔂 Loop track enabled!");
-    }
-
-    @Test
-    void onSlashCommandInteraction_loopCommand_cyclesLoopModeFromTrackToQueueAndReplies() {
-        long guildId = 42L;
-        TrackScheduler scheduler = mock(TrackScheduler.class);
-        when(scheduler.getLoopMode()).thenReturn(LoopMode.TRACK);
-        GuildMusicManager manager = mock(GuildMusicManager.class);
-        when(manager.getTrackScheduler()).thenReturn(scheduler);
-
-        SlashCommandInteractionEvent event = mockGuildSlashEvent(COMMAND_LOOP);
-        when(event.getGuild().getIdLong()).thenReturn(guildId);
-        when(event.getGuild().getSelfMember().getVoiceState().inAudioChannel()).thenReturn(true);
-        listener.getMusicManagers().put(guildId, manager);
-
-        listener.onSlashCommandInteraction(event);
-
-        verify(scheduler).setLoopMode(LoopMode.QUEUE);
-        verify(event).reply("🔁 Loop queue enabled!");
-    }
-
-    @Test
-    void onSlashCommandInteraction_loopCommand_cyclesLoopModeFromQueueToDisabledAndReplies() {
-        long guildId = 42L;
-        TrackScheduler scheduler = mock(TrackScheduler.class);
-        when(scheduler.getLoopMode()).thenReturn(LoopMode.QUEUE);
-        GuildMusicManager manager = mock(GuildMusicManager.class);
-        when(manager.getTrackScheduler()).thenReturn(scheduler);
-
-        SlashCommandInteractionEvent event = mockGuildSlashEvent(COMMAND_LOOP);
-        when(event.getGuild().getIdLong()).thenReturn(guildId);
-        when(event.getGuild().getSelfMember().getVoiceState().inAudioChannel()).thenReturn(true);
-        listener.getMusicManagers().put(guildId, manager);
-
-        listener.onSlashCommandInteraction(event);
-
-        verify(scheduler).setLoopMode(LoopMode.DISABLED);
-        verify(event).reply("Loop disabled!");
-    }
-
-    @Test
-    void onSlashCommandInteraction_loopCommand_repliesEphemeralWhenBotNotInVoiceChannel() {
-        SlashCommandInteractionEvent event = mockGuildSlashEvent(COMMAND_LOOP);
-
-        listener.onSlashCommandInteraction(event);
-
-        verify(event).reply(MESSAGE_BOT_NOT_IN_VOICE_CHANNEL);
-        verify(event.reply(MESSAGE_BOT_NOT_IN_VOICE_CHANNEL)).setEphemeral(true);
-    }
-
-    @Test
     void onSlashCommandInteraction_unknownCommand_repliesWithEphemeralUnknownMessage() {
+        listener = listenerWithNoHandlers();
+        listener.init();
         SlashCommandInteractionEvent event = mockGuildSlashEvent("nonexistent");
 
         listener.onSlashCommandInteraction(event);
@@ -322,18 +190,68 @@ class SlashCommandListenerTests {
         verify(event.reply("Unknown command!")).setEphemeral(true);
     }
 
+    @Test
+    void onSlashCommandInteraction_dispatchesToRegisteredHandler() {
+        SlashCommandHandler handler = handlerMock(false);
+        listener = listenerWithHandlers(handler);
+        listener.init();
+
+        listener.onSlashCommandInteraction(mockGuildSlashEvent("mycommand"));
+
+        verify(handler).handle(any(), any(Guild.class));
+    }
+
     // ─── helpers ──────────────────────────────────────────────────────────────
 
-    /**
-     * Creates a deep-stub slash event already scoped to a guild with the given command name.
-     * The member is stubbed as being in a voice channel by default so that the voice-channel
-     * guard in {@code onSlashCommandInteraction} does not short-circuit unrelated tests.
-     */
-    private SlashCommandInteractionEvent mockGuildSlashEvent(String commandName) {
-        SlashCommandInteractionEvent event = mock(SlashCommandInteractionEvent.class, Answers.RETURNS_DEEP_STUBS);
-        when(event.getGuild()).thenReturn(mock(Guild.class, Answers.RETURNS_DEEP_STUBS));
-        when(event.getFullCommandName()).thenReturn(commandName);
-        when(event.getMember().getVoiceState().inAudioChannel()).thenReturn(true);
-        return event;
+    @Test
+    void onSlashCommandInteraction_repliesEphemeralWhenHandlerRequiresBotInVoiceChannel() {
+        SlashCommandHandler handler = handlerMock(true);
+        listener = listenerWithHandlers(handler);
+        listener.init();
+        // bot is NOT in voice channel (default for Guild deep stub)
+        SlashCommandInteractionEvent event = mockGuildSlashEvent("mycommand");
+
+        listener.onSlashCommandInteraction(event);
+
+        verify(event).reply(MESSAGE_BOT_NOT_IN_VOICE_CHANNEL);
+        verify(event.reply(MESSAGE_BOT_NOT_IN_VOICE_CHANNEL)).setEphemeral(true);
+        verify(handler, never()).handle(any(), any());
+    }
+
+    @Test
+    void onSlashCommandInteraction_skipsVoiceGuardForHandlerThatOptsOut() {
+        SlashCommandHandler handler = handlerMock(false);
+        listener = listenerWithHandlers(handler);
+        listener.init();
+        // bot is NOT in voice channel — guard must be bypassed
+        SlashCommandInteractionEvent event = mockGuildSlashEvent("mycommand");
+
+        listener.onSlashCommandInteraction(event);
+
+        verify(handler).handle(any(), any(Guild.class));
+        verify(event, never()).reply(MESSAGE_BOT_NOT_IN_VOICE_CHANNEL);
+    }
+
+    @Test
+    void constructor_throwsWhenDuplicateCommandNamesExist() {
+        CommandData cd1 = mock(CommandData.class);
+        when(cd1.getName()).thenReturn("duplicate");
+        SlashCommandHandler h1 = mock(SlashCommandHandler.class);
+        when(h1.commandData()).thenReturn(cd1);
+
+        CommandData cd2 = mock(CommandData.class);
+        when(cd2.getName()).thenReturn("duplicate");
+        SlashCommandHandler h2 = mock(SlashCommandHandler.class);
+        when(h2.commandData()).thenReturn(cd2);
+
+        assertThrows(IllegalStateException.class, () -> listenerWithHandlers(h1, h2));
+    }
+
+    private SlashCommandListener listenerWithNoHandlers() {
+        return new SlashCommandListener(lavalinkClient, musicManagerRegistry, List.of());
+    }
+
+    private SlashCommandListener listenerWithHandlers(SlashCommandHandler... handlers) {
+        return new SlashCommandListener(lavalinkClient, musicManagerRegistry, List.of(handlers));
     }
 }
