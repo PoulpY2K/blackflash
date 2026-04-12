@@ -24,12 +24,15 @@ public class AudioLoader extends AbstractAudioLoadResultHandler {
     @Override
     public void ontrackLoaded(@NonNull TrackLoaded result) {
         final Track track = result.getTrack();
+        final String trackTitle = track.getInfo().getTitle();
         UserData userData = new UserData(event.getUser().getIdLong());
         track.setUserData(userData);
         guildMusicManager.getTrackScheduler().enqueue(track);
-        final String trackTitle = track.getInfo().getTitle();
 
-        event.getHook().sendMessage("Added to queue: " + trackTitle + "\nRequested by: <@" + userData.requester() + '>').queue();
+        var requesterId = userData.requester();
+        event.getHook().sendMessage("""
+                Added to queue: %s
+                Requested by: <@%d>""".formatted(trackTitle, requesterId)).queue();
     }
 
     @Override
@@ -41,11 +44,9 @@ public class AudioLoader extends AbstractAudioLoadResultHandler {
             return;
         }
 
-        event.getHook()
-                .sendMessage("Added " + tracks.size() + " tracks to the queue from " + result.getInfo().getName() + "!")
-                .queue();
-
         guildMusicManager.getTrackScheduler().enqueuePlaylist(tracks);
+
+        event.getHook().sendMessage("Added " + tracks.size() + " tracks to the queue from " + result.getInfo().getName() + "!").queue();
     }
 
     @Override
@@ -59,9 +60,9 @@ public class AudioLoader extends AbstractAudioLoadResultHandler {
 
         final Track firstTrack = tracks.getFirst();
 
-        event.getHook().sendMessage("Adding to queue: " + firstTrack.getInfo().getTitle()).queue();
-
         guildMusicManager.getTrackScheduler().enqueue(firstTrack);
+
+        event.getHook().sendMessage("Adding to queue: " + firstTrack.getInfo().getTitle()).queue();
     }
 
     @Override

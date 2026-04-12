@@ -14,6 +14,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -247,6 +248,55 @@ class TrackSchedulerTests {
 
         assertThat(trackScheduler.queue).isEmpty();
         verify(link).createOrUpdatePlayer();
+    }
+
+    @Test
+    void shuffle_doesNothingWhenQueueIsEmpty() {
+        trackScheduler.shuffle();
+
+        assertThat(trackScheduler.queue).isEmpty();
+        verify(guildMusicManager, never()).getPlayer();
+    }
+
+    @Test
+    void shuffle_doesNothingWhenQueueHasOnlyOneTrack() {
+        trackScheduler.queue.offer(mock(Track.class));
+
+        trackScheduler.shuffle();
+
+        assertThat(trackScheduler.queue).hasSize(1);
+        verify(guildMusicManager, never()).getPlayer();
+    }
+
+    @Test
+    void shuffle_preservesAllTracksInQueue() {
+        Track t1 = mock(Track.class);
+        Track t2 = mock(Track.class);
+        Track t3 = mock(Track.class);
+        trackScheduler.queue.addAll(List.of(t1, t2, t3));
+        when(guildMusicManager.getPlayer()).thenReturn(Optional.empty());
+
+        trackScheduler.shuffle();
+
+        assertThat(trackScheduler.queue).hasSize(3).containsExactlyInAnyOrder(t1, t2, t3);
+    }
+
+    @Test
+    void avoidFirstMatchingCurrentTrack_swapsMatchingTrackToEnd() {
+        LavalinkPlayer player = mock(LavalinkPlayer.class);
+        Track currentTrack = mock(Track.class, Answers.RETURNS_DEEP_STUBS);
+        Track matchingTrack = mock(Track.class, Answers.RETURNS_DEEP_STUBS);
+        Track otherTrack = mock(Track.class, Answers.RETURNS_DEEP_STUBS);
+        when(currentTrack.getEncoded()).thenReturn("same-encoded");
+        when(matchingTrack.getEncoded()).thenReturn("same-encoded");
+        when(player.getTrack()).thenReturn(currentTrack);
+        when(guildMusicManager.getPlayer()).thenReturn(Optional.of(player));
+
+        // Give a deterministic order: matchingTrack is first, so swap must occur
+        List<Track> tracks = new ArrayList<>(List.of(matchingTrack, otherTrack));
+        trackScheduler.avoidFirstMatchingCurrentTrack(tracks);
+
+        assertThat(tracks).containsExactly(otherTrack, matchingTrack);
     }
 }
 
