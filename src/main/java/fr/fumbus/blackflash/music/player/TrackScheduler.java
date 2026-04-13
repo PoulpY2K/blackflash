@@ -31,7 +31,9 @@ import static java.util.Objects.nonNull;
 @RequiredArgsConstructor
 public class TrackScheduler {
 
-    /** Package-private — accessible to same-package tests; use {@link #getQueueSize()} from other packages. */
+    /**
+     * Package-private — accessible to same-package tests; use {@link #getQueueSize()} from other packages.
+     */
     final Queue<Track> queue = new ConcurrentLinkedDeque<>();
     private final GuildMusicManager guildMusicManager;
 

@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 
 import static fr.fumbus.blackflash.discord.slash.utils.SlashCommandConstants.COMMAND_LOOP;
 import static fr.fumbus.blackflash.discord.slash.utils.SlashCommandConstants.DESCRIPTION_LOOP;
+import static fr.fumbus.blackflash.discord.slash.utils.SlashCommandUtils.withActiveManager;
 
 /**
  * @author Jérémy Laurent <poulpy2k>
@@ -36,14 +37,11 @@ public class SlashLoopCommandHandler implements SlashCommandHandler {
 
     @Override
     public void handle(SlashCommandInteractionEvent event, Guild guild) {
-        var managerOpt = registry.getIfPresent(guild.getIdLong());
-        if (managerOpt.isEmpty()) {
-            event.replyEmbeds(BotEmbeds.nothingPlaying()).setEphemeral(true).queue();
-            return;
-        }
-        final var scheduler = managerOpt.get().getTrackScheduler();
-        final LoopMode newMode = scheduler.getLoopMode().next();
-        scheduler.setLoopMode(newMode);
-        event.replyEmbeds(BotEmbeds.loopMode(newMode)).queue();
+        withActiveManager(registry, guild, event, manager -> {
+            final var scheduler = manager.getTrackScheduler();
+            final LoopMode newMode = scheduler.getLoopMode().next();
+            scheduler.setLoopMode(newMode);
+            event.replyEmbeds(BotEmbeds.loopMode(newMode)).queue();
+        });
     }
 }

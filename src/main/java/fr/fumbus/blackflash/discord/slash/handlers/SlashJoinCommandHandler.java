@@ -59,7 +59,7 @@ public class SlashJoinCommandHandler implements SlashCommandHandler {
      * Joins the member's current voice channel.
      *
      * @return {@code true} if the bot successfully joined; {@code false} if the member
-     *         is not in a voice channel (an ephemeral error embed is sent in that case).
+     * is not in a voice channel (an ephemeral error embed is sent in that case).
      */
     public boolean joinChannel(SlashCommandInteractionEvent event) {
         return joinChannel(event, null);
@@ -73,7 +73,7 @@ public class SlashJoinCommandHandler implements SlashCommandHandler {
      * @param onSuccess optional callback to run inside the reply's {@code queue()}
      *                  success handler; {@code null} is accepted.
      * @return {@code true} if the bot successfully joined; {@code false} if the member
-     *         is not in a voice channel (an ephemeral error embed is sent in that case).
+     * is not in a voice channel (an ephemeral error embed is sent in that case).
      */
     public boolean joinChannel(SlashCommandInteractionEvent event, Runnable onSuccess) {
         final Member member = event.getMember();
@@ -90,7 +90,7 @@ public class SlashJoinCommandHandler implements SlashCommandHandler {
         event.getJDA().getDirectAudioController().connect(memberVoiceState.getChannel());
         registry.getOrCreate(member.getGuild().getIdLong());
         if (nonNull(onSuccess)) {
-            event.replyEmbeds(BotEmbeds.joined(channelName)).queue(hook -> onSuccess.run());
+            event.replyEmbeds(BotEmbeds.joined(channelName)).queue(_ -> onSuccess.run());
         } else {
             event.replyEmbeds(BotEmbeds.joined(channelName)).queue();
         }

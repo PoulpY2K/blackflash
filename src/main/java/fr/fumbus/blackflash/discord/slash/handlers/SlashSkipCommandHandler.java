@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 
 import static fr.fumbus.blackflash.discord.slash.utils.SlashCommandConstants.COMMAND_SKIP;
 import static fr.fumbus.blackflash.discord.slash.utils.SlashCommandConstants.DESCRIPTION_SKIP;
+import static fr.fumbus.blackflash.discord.slash.utils.SlashCommandUtils.withActiveManager;
 
 /**
  * @author Jérémy Laurent <poulpy2k>
@@ -35,13 +36,10 @@ public class SlashSkipCommandHandler implements SlashCommandHandler {
 
     @Override
     public void handle(SlashCommandInteractionEvent event, Guild guild) {
-        var managerOpt = registry.getIfPresent(guild.getIdLong());
-        if (managerOpt.isEmpty()) {
-            event.replyEmbeds(BotEmbeds.nothingPlaying()).setEphemeral(true).queue();
-            return;
-        }
-        managerOpt.get().getTrackScheduler().skip();
-        event.replyEmbeds(BotEmbeds.skipped()).queue();
+        withActiveManager(registry, guild, event, manager -> {
+            manager.getTrackScheduler().skip();
+            event.replyEmbeds(BotEmbeds.skipped()).queue();
+        });
     }
 }
 

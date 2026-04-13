@@ -191,7 +191,9 @@ public class BotEmbeds {
                 .build();
     }
 
-    /** The dispatched command name did not match any registered handler. */
+    /**
+     * The dispatched command name did not match any registered handler.
+     */
     public static MessageEmbed unknownCommand() {
         return base(COLOR_ERROR)
                 .setDescription("❌ Unknown command!")
