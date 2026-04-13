@@ -1,6 +1,8 @@
 package fr.fumbus.blackflash.discord.slash.handlers;
 
+import fr.fumbus.blackflash.discord.BotEmbeds;
 import fr.fumbus.blackflash.discord.slash.SlashCommandHandler;
+import fr.fumbus.blackflash.music.manager.GuildMusicManager;
 import fr.fumbus.blackflash.music.manager.GuildMusicManagerRegistry;
 import lombok.RequiredArgsConstructor;
 import net.dv8tion.jda.api.entities.Guild;
@@ -34,9 +36,10 @@ public class SlashLeaveCommandHandler implements SlashCommandHandler {
 
     @Override
     public void handle(SlashCommandInteractionEvent event, Guild guild) {
+        registry.getIfPresent(guild.getIdLong()).ifPresent(GuildMusicManager::stop);
         event.getJDA().getDirectAudioController().disconnect(guild);
         registry.remove(guild.getIdLong());
-        event.reply("Leaving the channel!").queue();
+        event.replyEmbeds(BotEmbeds.left()).queue();
     }
 }
 

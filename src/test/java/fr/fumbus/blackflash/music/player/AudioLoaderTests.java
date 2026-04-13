@@ -2,6 +2,7 @@ package fr.fumbus.blackflash.music.player;
 
 import dev.arbjerg.lavalink.client.player.*;
 import fr.fumbus.blackflash.music.manager.GuildMusicManager;
+import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,7 +40,7 @@ class AudioLoaderTests {
 
         verify(track).setUserData(new UserData(userId));
         verify(guildMusicManager.getTrackScheduler()).enqueue(track);
-        verify(event.getHook()).sendMessage("Added to queue: Test Track\nRequested by: <@" + userId + '>');
+        verify(event.getHook()).sendMessageEmbeds(any(MessageEmbed.class));
     }
 
     @Test
@@ -54,7 +55,7 @@ class AudioLoaderTests {
         audioLoader.onPlaylistLoaded(result);
 
         verify(guildMusicManager.getTrackScheduler()).enqueuePlaylist(tracks);
-        verify(event.getHook()).sendMessage("Added 2 tracks to the queue from My Playlist!");
+        verify(event.getHook()).sendMessageEmbeds(any(MessageEmbed.class));
     }
 
     @Test
@@ -64,7 +65,7 @@ class AudioLoaderTests {
 
         audioLoader.onPlaylistLoaded(result);
 
-        verify(event.getHook()).sendMessage("The playlist is empty!");
+        verify(event.getHook()).sendMessageEmbeds(any(MessageEmbed.class));
         verify(guildMusicManager.getTrackScheduler(), never()).enqueuePlaylist(any());
     }
 
@@ -75,12 +76,13 @@ class AudioLoaderTests {
         Track secondTrack = mock(Track.class, Answers.RETURNS_DEEP_STUBS);
         when(result.getTracks()).thenReturn(List.of(firstTrack, secondTrack));
         when(firstTrack.getInfo().getTitle()).thenReturn("Found Track");
+        when(event.getUser().getIdLong()).thenReturn(42L);
 
         audioLoader.onSearchResultLoaded(result);
 
         verify(guildMusicManager.getTrackScheduler()).enqueue(firstTrack);
         verify(guildMusicManager.getTrackScheduler(), never()).enqueue(secondTrack);
-        verify(event.getHook()).sendMessage("Adding to queue: Found Track");
+        verify(event.getHook()).sendMessageEmbeds(any(MessageEmbed.class));
     }
 
     @Test
@@ -90,7 +92,7 @@ class AudioLoaderTests {
 
         audioLoader.onSearchResultLoaded(result);
 
-        verify(event.getHook()).sendMessage("No tracks found!");
+        verify(event.getHook()).sendMessageEmbeds(any(MessageEmbed.class));
         verify(guildMusicManager.getTrackScheduler(), never()).enqueue(any());
     }
 
@@ -98,7 +100,7 @@ class AudioLoaderTests {
     void noMatches_sendsNoMatchesFoundMessage() {
         audioLoader.noMatches();
 
-        verify(event.getHook()).sendMessage("No matches found for your input!");
+        verify(event.getHook()).sendMessageEmbeds(any(MessageEmbed.class));
     }
 
     @Test
@@ -108,7 +110,7 @@ class AudioLoaderTests {
 
         audioLoader.loadFailed(result);
 
-        verify(event.getHook()).sendMessage("Failed to load track! Connection refused");
+        verify(event.getHook()).sendMessageEmbeds(any(MessageEmbed.class));
     }
-}
 
+}

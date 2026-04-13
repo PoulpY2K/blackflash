@@ -7,6 +7,7 @@ import fr.fumbus.blackflash.music.manager.GuildMusicManager;
 import fr.fumbus.blackflash.music.manager.GuildMusicManagerRegistry;
 import fr.fumbus.blackflash.music.player.TrackScheduler;
 import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.session.ReadyEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
@@ -23,8 +24,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 
-import static fr.fumbus.blackflash.discord.slash.utils.SlashCommandConstants.MESSAGE_BOT_NOT_IN_VOICE_CHANNEL;
-import static fr.fumbus.blackflash.discord.slash.utils.SlashCommandConstants.MESSAGE_MEMBER_NOT_IN_VOICE_CHANNEL;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -49,14 +48,22 @@ class SlashCommandListenerTests {
     // ─── initial state ────────────────────────────────────────────────────────
 
     /**
-     * Stub a handler with the given command name and requiresBotInVoiceChannel value.
+     * Stub a handler with the given requiresBotInVoiceChannel value; requiresMemberInVoiceChannel defaults to true.
      */
     private static SlashCommandHandler handlerMock(boolean requiresBot) {
+        return handlerMock(requiresBot, true);
+    }
+
+    /**
+     * Stub a handler with explicit requiresBotInVoiceChannel and requiresMemberInVoiceChannel values.
+     */
+    private static SlashCommandHandler handlerMock(boolean requiresBot, boolean requiresMember) {
         SlashCommandHandler handler = mock(SlashCommandHandler.class);
         CommandData commandData = mock(CommandData.class);
         when(commandData.getName()).thenReturn("mycommand");
         when(handler.commandData()).thenReturn(commandData);
         when(handler.requiresBotInVoiceChannel()).thenReturn(requiresBot);
+        when(handler.requiresMemberInVoiceChannel()).thenReturn(requiresMember);
         return handler;
     }
 
@@ -67,10 +74,10 @@ class SlashCommandListenerTests {
      * The member is stubbed as being in a voice channel so the voice-channel guard
      * in {@code onSlashCommandInteraction} does not short-circuit unrelated tests.
      */
-    private static SlashCommandInteractionEvent mockGuildSlashEvent(String commandName) {
+    private static SlashCommandInteractionEvent mockGuildSlashEvent() {
         SlashCommandInteractionEvent event = mock(SlashCommandInteractionEvent.class, Answers.RETURNS_DEEP_STUBS);
         when(event.getGuild()).thenReturn(mock(Guild.class, Answers.RETURNS_DEEP_STUBS));
-        when(event.getFullCommandName()).thenReturn(commandName);
+        when(event.getFullCommandName()).thenReturn("mycommand");
         when(event.getMember().getVoiceState().inAudioChannel()).thenReturn(true);
         return event;
     }
@@ -167,27 +174,52 @@ class SlashCommandListenerTests {
 
     @Test
     void onSlashCommandInteraction_repliesEphemeralWhenMemberNotInVoiceChannel() {
-        listener = listenerWithNoHandlers();
+        // Only stub commandData + requiresMemberInVoiceChannel — requiresBotInVoiceChannel
+        // is never reached because the member guard fires first.
+        SlashCommandHandler handler = mock(SlashCommandHandler.class);
+        CommandData commandData = mock(CommandData.class);
+        when(commandData.getName()).thenReturn("mycommand");
+        when(handler.commandData()).thenReturn(commandData);
+        when(handler.requiresMemberInVoiceChannel()).thenReturn(true);
+        listener = listenerWithHandlers(handler);
         SlashCommandInteractionEvent event = mock(SlashCommandInteractionEvent.class, Answers.RETURNS_DEEP_STUBS);
+        when(event.getFullCommandName()).thenReturn("mycommand");
         when(event.getMember().getVoiceState()).thenReturn(null);
 
         listener.onSlashCommandInteraction(event);
 
-        verify(event).reply(MESSAGE_MEMBER_NOT_IN_VOICE_CHANNEL);
-        verify(event.reply(MESSAGE_MEMBER_NOT_IN_VOICE_CHANNEL)).setEphemeral(true);
+        ArgumentCaptor<MessageEmbed> embedCaptor = ArgumentCaptor.forClass(MessageEmbed.class);
+        verify(event).replyEmbeds(embedCaptor.capture());
+        verify(event.replyEmbeds(embedCaptor.getValue())).setEphemeral(true);
         verify(event.getJDA().getDirectAudioController(), never()).connect(any());
+    }
+
+    @Test
+    void onSlashCommandInteraction_skipsMemberVoiceGuardForHandlerThatOptsOut() {
+        SlashCommandHandler handler = handlerMock(false, false); // requiresMemberInVoiceChannel = false
+        listener = listenerWithHandlers(handler);
+        SlashCommandInteractionEvent event = mock(SlashCommandInteractionEvent.class, Answers.RETURNS_DEEP_STUBS);
+        when(event.getFullCommandName()).thenReturn("mycommand");
+        when(event.getMember().getVoiceState()).thenReturn(null);
+
+        listener.onSlashCommandInteraction(event);
+
+        verify(handler).handle(any(), any(Guild.class));
+        verify(event, never()).replyEmbeds(any(MessageEmbed.class));
     }
 
     @Test
     void onSlashCommandInteraction_unknownCommand_repliesWithEphemeralUnknownMessage() {
         listener = listenerWithNoHandlers();
         listener.init();
-        SlashCommandInteractionEvent event = mockGuildSlashEvent("nonexistent");
+        SlashCommandInteractionEvent event = mock(SlashCommandInteractionEvent.class, Answers.RETURNS_DEEP_STUBS);
+        when(event.getFullCommandName()).thenReturn("nonexistent");
 
         listener.onSlashCommandInteraction(event);
 
-        verify(event).reply("Unknown command!");
-        verify(event.reply("Unknown command!")).setEphemeral(true);
+        ArgumentCaptor<MessageEmbed> embedCaptor = ArgumentCaptor.forClass(MessageEmbed.class);
+        verify(event).replyEmbeds(embedCaptor.capture());
+        verify(event.replyEmbeds(embedCaptor.getValue())).setEphemeral(true);
     }
 
     @Test
@@ -196,7 +228,7 @@ class SlashCommandListenerTests {
         listener = listenerWithHandlers(handler);
         listener.init();
 
-        listener.onSlashCommandInteraction(mockGuildSlashEvent("mycommand"));
+        listener.onSlashCommandInteraction(mockGuildSlashEvent());
 
         verify(handler).handle(any(), any(Guild.class));
     }
@@ -209,12 +241,13 @@ class SlashCommandListenerTests {
         listener = listenerWithHandlers(handler);
         listener.init();
         // bot is NOT in voice channel (default for Guild deep stub)
-        SlashCommandInteractionEvent event = mockGuildSlashEvent("mycommand");
+        SlashCommandInteractionEvent event = mockGuildSlashEvent();
 
         listener.onSlashCommandInteraction(event);
 
-        verify(event).reply(MESSAGE_BOT_NOT_IN_VOICE_CHANNEL);
-        verify(event.reply(MESSAGE_BOT_NOT_IN_VOICE_CHANNEL)).setEphemeral(true);
+        ArgumentCaptor<MessageEmbed> embedCaptor = ArgumentCaptor.forClass(MessageEmbed.class);
+        verify(event).replyEmbeds(embedCaptor.capture());
+        verify(event.replyEmbeds(embedCaptor.getValue())).setEphemeral(true);
         verify(handler, never()).handle(any(), any());
     }
 
@@ -224,12 +257,12 @@ class SlashCommandListenerTests {
         listener = listenerWithHandlers(handler);
         listener.init();
         // bot is NOT in voice channel — guard must be bypassed
-        SlashCommandInteractionEvent event = mockGuildSlashEvent("mycommand");
+        SlashCommandInteractionEvent event = mockGuildSlashEvent();
 
         listener.onSlashCommandInteraction(event);
 
         verify(handler).handle(any(), any(Guild.class));
-        verify(event, never()).reply(MESSAGE_BOT_NOT_IN_VOICE_CHANNEL);
+        verify(event, never()).replyEmbeds(any(MessageEmbed.class));
     }
 
     @Test

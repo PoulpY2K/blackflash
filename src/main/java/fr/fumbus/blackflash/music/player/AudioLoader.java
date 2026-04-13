@@ -2,6 +2,7 @@ package fr.fumbus.blackflash.music.player;
 
 import dev.arbjerg.lavalink.client.AbstractAudioLoadResultHandler;
 import dev.arbjerg.lavalink.client.player.*;
+import fr.fumbus.blackflash.discord.BotEmbeds;
 import fr.fumbus.blackflash.music.manager.GuildMusicManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -28,11 +29,7 @@ public class AudioLoader extends AbstractAudioLoadResultHandler {
         UserData userData = new UserData(event.getUser().getIdLong());
         track.setUserData(userData);
         guildMusicManager.getTrackScheduler().enqueue(track);
-
-        var requesterId = userData.requester();
-        event.getHook().sendMessage("""
-                Added to queue: %s
-                Requested by: <@%d>""".formatted(trackTitle, requesterId)).queue();
+        event.getHook().sendMessageEmbeds(BotEmbeds.trackAdded(trackTitle, userData.requester())).queue();
     }
 
     @Override
@@ -40,13 +37,12 @@ public class AudioLoader extends AbstractAudioLoadResultHandler {
         final List<Track> tracks = result.getTracks();
 
         if (tracks.isEmpty()) {
-            event.getHook().sendMessage("The playlist is empty!").queue();
+            event.getHook().sendMessageEmbeds(BotEmbeds.playlistEmpty()).queue();
             return;
         }
 
         guildMusicManager.getTrackScheduler().enqueuePlaylist(tracks);
-
-        event.getHook().sendMessage("Added " + tracks.size() + " tracks to the queue from " + result.getInfo().getName() + "!").queue();
+        event.getHook().sendMessageEmbeds(BotEmbeds.playlistAdded(tracks.size(), result.getInfo().getName())).queue();
     }
 
     @Override
@@ -54,25 +50,24 @@ public class AudioLoader extends AbstractAudioLoadResultHandler {
         final List<Track> tracks = result.getTracks();
 
         if (tracks.isEmpty()) {
-            event.getHook().sendMessage("No tracks found!").queue();
+            event.getHook().sendMessageEmbeds(BotEmbeds.noTracksFound()).queue();
             return;
         }
 
         final Track firstTrack = tracks.getFirst();
-
+        UserData userData = new UserData(event.getUser().getIdLong());
+        firstTrack.setUserData(userData);
         guildMusicManager.getTrackScheduler().enqueue(firstTrack);
-
-        event.getHook().sendMessage("Adding to queue: " + firstTrack.getInfo().getTitle()).queue();
+        event.getHook().sendMessageEmbeds(BotEmbeds.trackAdded(firstTrack.getInfo().getTitle(), userData.requester())).queue();
     }
 
     @Override
     public void noMatches() {
-        event.getHook().sendMessage("No matches found for your input!").queue();
+        event.getHook().sendMessageEmbeds(BotEmbeds.noTracksFound()).queue();
     }
 
     @Override
     public void loadFailed(@NonNull LoadFailed result) {
-        event.getHook().sendMessage("Failed to load track! " + result.getException().getMessage()).queue();
+        event.getHook().sendMessageEmbeds(BotEmbeds.loadFailed(result.getException().getMessage())).queue();
     }
 }
-

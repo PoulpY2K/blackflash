@@ -1,5 +1,6 @@
 package fr.fumbus.blackflash.discord.slash.handlers;
 
+import fr.fumbus.blackflash.discord.BotEmbeds;
 import fr.fumbus.blackflash.discord.slash.SlashCommandHandler;
 import fr.fumbus.blackflash.music.manager.GuildMusicManagerRegistry;
 import fr.fumbus.blackflash.music.player.TrackScheduler;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Component;
 
 import static fr.fumbus.blackflash.discord.slash.utils.SlashCommandConstants.COMMAND_SHUFFLE;
 import static fr.fumbus.blackflash.discord.slash.utils.SlashCommandConstants.DESCRIPTION_SHUFFLE;
+import static fr.fumbus.blackflash.discord.slash.utils.SlashCommandUtils.withActiveManager;
 
 /**
  * @author Jérémy Laurent <poulpy2k>
@@ -28,6 +30,10 @@ public class SlashShuffleCommandHandler implements SlashCommandHandler {
 
     private final GuildMusicManagerRegistry registry;
 
+    private static boolean queueHasOneOrLessTrack(TrackScheduler scheduler) {
+        return scheduler.getQueueSize() <= 1;
+    }
+
     @Override
     public CommandData commandData() {
         return COMMAND_DATA;
@@ -35,19 +41,16 @@ public class SlashShuffleCommandHandler implements SlashCommandHandler {
 
     @Override
     public void handle(SlashCommandInteractionEvent event, Guild guild) {
-        var scheduler = registry.getOrCreate(guild.getIdLong()).getTrackScheduler();
+        withActiveManager(registry, guild, event, manager -> {
+            final var scheduler = manager.getTrackScheduler();
 
-        if (queueHasOneOrLessTrack(scheduler)) {
-            event.reply("There needs to be at least 2 tracks in the queue to shuffle!").setEphemeral(true).queue();
-            return;
-        }
+            if (queueHasOneOrLessTrack(scheduler)) {
+                event.replyEmbeds(BotEmbeds.shuffleNotEnoughTracks()).setEphemeral(true).queue();
+                return;
+            }
 
-        scheduler.shuffle();
-        event.reply("🔀 Queue shuffled!").queue();
-    }
-
-    private static boolean queueHasOneOrLessTrack(TrackScheduler scheduler) {
-        return scheduler.queue.size() <= 1;
+            scheduler.shuffle();
+            event.replyEmbeds(BotEmbeds.shuffled()).queue();
+        });
     }
 }
-

@@ -23,6 +23,17 @@ public interface SlashCommandHandler {
 
     /**
      * Whether the central dispatcher should reject the interaction with an ephemeral
+     * "You must be in a voice channel" reply before calling {@link #handle}.
+     *
+     * <p>Defaults to {@code true}. Override to {@code false} for commands that do not
+     * require the invoking member to be in a voice channel (e.g. {@code /help}).
+     */
+    default boolean requiresMemberInVoiceChannel() {
+        return true;
+    }
+
+    /**
+     * Whether the central dispatcher should reject the interaction with an ephemeral
      * "I'm not in a voice channel" reply before calling {@link #handle}.
      *
      * <p>Defaults to {@code true}. Override to {@code false} for commands that manage

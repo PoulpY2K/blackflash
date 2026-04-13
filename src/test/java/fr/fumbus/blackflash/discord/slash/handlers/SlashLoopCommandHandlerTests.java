@@ -5,18 +5,24 @@ import fr.fumbus.blackflash.music.manager.GuildMusicManagerRegistry;
 import fr.fumbus.blackflash.music.player.LoopMode;
 import fr.fumbus.blackflash.music.player.TrackScheduler;
 import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.InteractionContextType;
 import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Answers;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.Optional;
+
+import static fr.fumbus.blackflash.discord.BotEmbeds.COLOR_WARNING;
 import static fr.fumbus.blackflash.discord.slash.utils.SlashCommandConstants.COMMAND_LOOP;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -37,27 +43,44 @@ class SlashLoopCommandHandlerTests {
     }
 
     @Test
-    void handle_cyclesLoopModeFromDisabledToTrackAndReplies() {
-        assertLoopCycle(LoopMode.DISABLED, LoopMode.TRACK, "🔂 Loop track enabled!");
+    void handle_repliesNothingPlayingWhenNoManagerPresent() {
+        long guildId = 42L;
+        when(registry.getIfPresent(guildId)).thenReturn(Optional.empty());
+
+        SlashCommandInteractionEvent event = mock(SlashCommandInteractionEvent.class, Answers.RETURNS_DEEP_STUBS);
+        Guild guild = mock(Guild.class, Answers.RETURNS_DEEP_STUBS);
+        when(guild.getIdLong()).thenReturn(guildId);
+
+        handler.handle(event, guild);
+
+        ArgumentCaptor<MessageEmbed> embedCaptor = ArgumentCaptor.forClass(MessageEmbed.class);
+        verify(event).replyEmbeds(embedCaptor.capture());
+        assertThat(embedCaptor.getValue().getColorRaw()).isEqualTo(COLOR_WARNING);
+        verify(event.replyEmbeds(any(MessageEmbed.class))).setEphemeral(true);
     }
 
     @Test
-    void handle_cyclesLoopModeFromTrackToQueueAndReplies() {
-        assertLoopCycle(LoopMode.TRACK, LoopMode.QUEUE, "🔁 Loop queue enabled!");
+    void handle_cyclesLoopModeFromDisabledToTrack() {
+        assertLoopCycle(LoopMode.DISABLED, LoopMode.TRACK);
     }
 
     @Test
-    void handle_cyclesLoopModeFromQueueToDisabledAndReplies() {
-        assertLoopCycle(LoopMode.QUEUE, LoopMode.DISABLED, "Loop disabled!");
+    void handle_cyclesLoopModeFromTrackToQueue() {
+        assertLoopCycle(LoopMode.TRACK, LoopMode.QUEUE);
     }
 
-    private void assertLoopCycle(LoopMode currentMode, LoopMode expectedMode, String expectedReply) {
+    @Test
+    void handle_cyclesLoopModeFromQueueToDisabled() {
+        assertLoopCycle(LoopMode.QUEUE, LoopMode.DISABLED);
+    }
+
+    private void assertLoopCycle(LoopMode currentMode, LoopMode expectedMode) {
         long guildId = 42L;
         TrackScheduler scheduler = mock(TrackScheduler.class);
         when(scheduler.getLoopMode()).thenReturn(currentMode);
         GuildMusicManager manager = mock(GuildMusicManager.class);
         when(manager.getTrackScheduler()).thenReturn(scheduler);
-        when(registry.getOrCreate(guildId)).thenReturn(manager);
+        when(registry.getIfPresent(guildId)).thenReturn(Optional.of(manager));
 
         SlashCommandInteractionEvent event = mock(SlashCommandInteractionEvent.class, Answers.RETURNS_DEEP_STUBS);
         Guild guild = mock(Guild.class, Answers.RETURNS_DEEP_STUBS);
@@ -66,7 +89,6 @@ class SlashLoopCommandHandlerTests {
         handler.handle(event, guild);
 
         verify(scheduler).setLoopMode(expectedMode);
-        verify(event).reply(expectedReply);
+        verify(event).replyEmbeds(any(MessageEmbed.class));
     }
 }
-

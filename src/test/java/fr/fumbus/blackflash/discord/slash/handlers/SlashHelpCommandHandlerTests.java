@@ -7,14 +7,15 @@ import net.dv8tion.jda.api.interactions.InteractionContextType;
 import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Answers;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static fr.fumbus.blackflash.discord.slash.utils.SlashCommandConstants.COMMAND_HELP;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class SlashHelpCommandHandlerTests {
@@ -28,6 +29,11 @@ class SlashHelpCommandHandlerTests {
         assertThat(data.getName()).isEqualTo(COMMAND_HELP);
         assertThat(data.getContexts()).contains(InteractionContextType.GUILD);
         assertThat(data.getOptions()).isEmpty();
+    }
+
+    @Test
+    void requiresMemberInVoiceChannel_returnsFalse() {
+        assertThat(handler.requiresMemberInVoiceChannel()).isFalse();
     }
 
     @Test

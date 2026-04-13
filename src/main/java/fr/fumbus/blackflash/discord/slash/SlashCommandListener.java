@@ -3,6 +3,7 @@ package fr.fumbus.blackflash.discord.slash;
 import dev.arbjerg.lavalink.client.LavalinkClient;
 import dev.arbjerg.lavalink.client.event.TrackEndEvent;
 import dev.arbjerg.lavalink.client.event.TrackStartEvent;
+import fr.fumbus.blackflash.discord.BotEmbeds;
 import fr.fumbus.blackflash.music.manager.GuildMusicManagerRegistry;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.log4j.Log4j2;
@@ -19,8 +20,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import static fr.fumbus.blackflash.discord.slash.utils.SlashCommandConstants.MESSAGE_BOT_NOT_IN_VOICE_CHANNEL;
-import static fr.fumbus.blackflash.discord.slash.utils.SlashCommandConstants.MESSAGE_MEMBER_NOT_IN_VOICE_CHANNEL;
 import static fr.fumbus.blackflash.discord.slash.utils.SlashCommandUtils.isBotInVoiceChannel;
 import static java.util.Objects.isNull;
 
@@ -48,6 +47,28 @@ public class SlashCommandListener extends ListenerAdapter {
                         commandHandler -> commandHandler.commandData().getName(),
                         commandHandler -> commandHandler)
                 );
+    }
+
+    private static @NonNull Member getMember(SlashCommandInteractionEvent event) {
+        return Optional
+                .ofNullable(event.getMember())
+                .orElseThrow(() -> {
+                    log.error("Received a slash command interaction without a member context!");
+                    return new IllegalStateException("Received a slash command interaction without a member context!");
+                });
+    }
+
+    private static boolean checkIfMemberNotInVoiceChannel(Member member) {
+        return isNull(member.getVoiceState()) || !member.getVoiceState().inAudioChannel();
+    }
+
+    private static @NonNull Guild getGuild(SlashCommandInteractionEvent event) {
+        return Optional
+                .ofNullable(event.getGuild())
+                .orElseThrow(() -> {
+                    log.error("Received a slash command interaction without a guild context!");
+                    return new IllegalStateException("Received a slash command interaction without a guild context!");
+                });
     }
 
     @PostConstruct
@@ -78,45 +99,21 @@ public class SlashCommandListener extends ListenerAdapter {
     public void onSlashCommandInteraction(@NonNull SlashCommandInteractionEvent event) {
         Guild guild = getGuild(event);
         Member member = getMember(event);
-        if (checkIfMemberNotInVoiceChannel(member)) {
-            event.reply(MESSAGE_MEMBER_NOT_IN_VOICE_CHANNEL).setEphemeral(true).queue();
-            return;
-        }
-
         String commandName = event.getFullCommandName();
         SlashCommandHandler handler = handlersByName.get(commandName);
 
         if (isNull(handler)) {
             log.warn("Received an unknown slash command interaction: {}", commandName);
-            event.reply("Unknown command!").setEphemeral(true).queue();
+            event.replyEmbeds(BotEmbeds.unknownCommand()).setEphemeral(true).queue();
+            return;
+        } else if (handler.requiresMemberInVoiceChannel() && checkIfMemberNotInVoiceChannel(member)) {
+            event.replyEmbeds(BotEmbeds.memberNotInVoiceChannel()).setEphemeral(true).queue();
             return;
         } else if (handler.requiresBotInVoiceChannel() && !isBotInVoiceChannel(guild)) {
-            event.reply(MESSAGE_BOT_NOT_IN_VOICE_CHANNEL).setEphemeral(true).queue();
+            event.replyEmbeds(BotEmbeds.botNotInVoiceChannel()).setEphemeral(true).queue();
             return;
         }
 
         handler.handle(event, guild);
-    }
-
-    private static @NonNull Member getMember(SlashCommandInteractionEvent event) {
-        return Optional
-                .ofNullable(event.getMember())
-                .orElseThrow(() -> {
-                    log.error("Received a slash command interaction without a member context!");
-                    return new IllegalStateException("Received a slash command interaction without a member context!");
-                });
-    }
-
-    private static boolean checkIfMemberNotInVoiceChannel(Member member) {
-        return isNull(member.getVoiceState()) || !member.getVoiceState().inAudioChannel();
-    }
-
-    private static @NonNull Guild getGuild(SlashCommandInteractionEvent event) {
-        return Optional
-                .ofNullable(event.getGuild())
-                .orElseThrow(() -> {
-                    log.error("Received a slash command interaction without a guild context!");
-                    return new IllegalStateException("Received a slash command interaction without a guild context!");
-                });
     }
 }
