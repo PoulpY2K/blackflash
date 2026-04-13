@@ -12,10 +12,14 @@ import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Answers;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.Optional;
+
+import static fr.fumbus.blackflash.discord.BotEmbeds.COLOR_WARNING;
 import static fr.fumbus.blackflash.discord.slash.utils.SlashCommandConstants.COMMAND_LOOP;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -39,6 +43,23 @@ class SlashLoopCommandHandlerTests {
     }
 
     @Test
+    void handle_repliesNothingPlayingWhenNoManagerPresent() {
+        long guildId = 42L;
+        when(registry.getIfPresent(guildId)).thenReturn(Optional.empty());
+
+        SlashCommandInteractionEvent event = mock(SlashCommandInteractionEvent.class, Answers.RETURNS_DEEP_STUBS);
+        Guild guild = mock(Guild.class, Answers.RETURNS_DEEP_STUBS);
+        when(guild.getIdLong()).thenReturn(guildId);
+
+        handler.handle(event, guild);
+
+        ArgumentCaptor<MessageEmbed> embedCaptor = ArgumentCaptor.forClass(MessageEmbed.class);
+        verify(event).replyEmbeds(embedCaptor.capture());
+        assertThat(embedCaptor.getValue().getColorRaw()).isEqualTo(COLOR_WARNING);
+        verify(event.replyEmbeds(any(MessageEmbed.class))).setEphemeral(true);
+    }
+
+    @Test
     void handle_cyclesLoopModeFromDisabledToTrack() {
         assertLoopCycle(LoopMode.DISABLED, LoopMode.TRACK);
     }
@@ -59,7 +80,7 @@ class SlashLoopCommandHandlerTests {
         when(scheduler.getLoopMode()).thenReturn(currentMode);
         GuildMusicManager manager = mock(GuildMusicManager.class);
         when(manager.getTrackScheduler()).thenReturn(scheduler);
-        when(registry.getOrCreate(guildId)).thenReturn(manager);
+        when(registry.getIfPresent(guildId)).thenReturn(Optional.of(manager));
 
         SlashCommandInteractionEvent event = mock(SlashCommandInteractionEvent.class, Answers.RETURNS_DEEP_STUBS);
         Guild guild = mock(Guild.class, Answers.RETURNS_DEEP_STUBS);

@@ -121,8 +121,14 @@ class BotEmbedsTests {
         assertThat(shuffleNotEnoughTracks().getColorRaw()).isEqualTo(COLOR_ERROR);
     }
 
-    // ── Guards ──────────────────────────────────────────────────────────────────
+    @Test
+    void unknownCommand_hasErrorColor() {
+        assertThat(unknownCommand().getColorRaw()).isEqualTo(COLOR_ERROR);
+    }
 
+    /**
+     * Member tried to use a music command while not in a voice channel.
+     */
     @Test
     void memberNotInVoiceChannel_hasErrorColor() {
         assertThat(memberNotInVoiceChannel().getColorRaw()).isEqualTo(COLOR_ERROR);

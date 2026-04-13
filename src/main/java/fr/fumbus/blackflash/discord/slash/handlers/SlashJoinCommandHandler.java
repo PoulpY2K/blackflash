@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 
 import static fr.fumbus.blackflash.discord.slash.utils.SlashCommandConstants.COMMAND_JOIN;
 import static fr.fumbus.blackflash.discord.slash.utils.SlashCommandConstants.DESCRIPTION_JOIN;
+import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 
 /**
@@ -54,18 +55,45 @@ public class SlashJoinCommandHandler implements SlashCommandHandler {
         joinChannel(event);
     }
 
-    public void joinChannel(SlashCommandInteractionEvent event) {
+    /**
+     * Joins the member's current voice channel.
+     *
+     * @return {@code true} if the bot successfully joined; {@code false} if the member
+     *         is not in a voice channel (an ephemeral error embed is sent in that case).
+     */
+    public boolean joinChannel(SlashCommandInteractionEvent event) {
+        return joinChannel(event, null);
+    }
+
+    /**
+     * Joins the member's current voice channel and, once Discord has acknowledged the
+     * reply, invokes {@code onSuccess} so callers can chain further work (e.g. loading
+     * a track) without risking an {@code Unknown interaction} race.
+     *
+     * @param onSuccess optional callback to run inside the reply's {@code queue()}
+     *                  success handler; {@code null} is accepted.
+     * @return {@code true} if the bot successfully joined; {@code false} if the member
+     *         is not in a voice channel (an ephemeral error embed is sent in that case).
+     */
+    public boolean joinChannel(SlashCommandInteractionEvent event, Runnable onSuccess) {
         final Member member = event.getMember();
-        String channelName = "DEFAULT_CHANNEL";
-        if (nonNull(member)) {
-            final GuildVoiceState memberVoiceState = member.getVoiceState();
-            if (nonNull(memberVoiceState) && memberVoiceState.inAudioChannel() && nonNull(memberVoiceState.getChannel())) {
-                channelName = memberVoiceState.getChannel().getName();
-                event.getJDA().getDirectAudioController().connect(memberVoiceState.getChannel());
-            }
-            registry.getOrCreate(member.getGuild().getIdLong());
+        if (isNull(member)) {
+            event.replyEmbeds(BotEmbeds.memberNotInVoiceChannel()).setEphemeral(true).queue();
+            return false;
         }
-        event.replyEmbeds(BotEmbeds.joined(channelName)).queue();
+        final GuildVoiceState memberVoiceState = member.getVoiceState();
+        if (isNull(memberVoiceState) || !memberVoiceState.inAudioChannel() || isNull(memberVoiceState.getChannel())) {
+            event.replyEmbeds(BotEmbeds.memberNotInVoiceChannel()).setEphemeral(true).queue();
+            return false;
+        }
+        final String channelName = memberVoiceState.getChannel().getName();
+        event.getJDA().getDirectAudioController().connect(memberVoiceState.getChannel());
+        registry.getOrCreate(member.getGuild().getIdLong());
+        if (nonNull(onSuccess)) {
+            event.replyEmbeds(BotEmbeds.joined(channelName)).queue(hook -> onSuccess.run());
+        } else {
+            event.replyEmbeds(BotEmbeds.joined(channelName)).queue();
+        }
+        return true;
     }
 }
-

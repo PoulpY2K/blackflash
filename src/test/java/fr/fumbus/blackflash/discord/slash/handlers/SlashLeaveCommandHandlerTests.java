@@ -1,5 +1,6 @@
 package fr.fumbus.blackflash.discord.slash.handlers;
 
+import fr.fumbus.blackflash.music.manager.GuildMusicManager;
 import fr.fumbus.blackflash.music.manager.GuildMusicManagerRegistry;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.MessageEmbed;
@@ -12,6 +13,8 @@ import org.mockito.Answers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.Optional;
 
 import static fr.fumbus.blackflash.discord.slash.utils.SlashCommandConstants.COMMAND_LEAVE;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -36,8 +39,26 @@ class SlashLeaveCommandHandlerTests {
     }
 
     @Test
+    void handle_stopsActiveManagerBeforeDisconnecting() {
+        long guildId = 42L;
+        GuildMusicManager manager = mock(GuildMusicManager.class);
+        when(registry.getIfPresent(guildId)).thenReturn(Optional.of(manager));
+
+        SlashCommandInteractionEvent event = mock(SlashCommandInteractionEvent.class, Answers.RETURNS_DEEP_STUBS);
+        Guild guild = mock(Guild.class, Answers.RETURNS_DEEP_STUBS);
+        when(guild.getIdLong()).thenReturn(guildId);
+
+        handler.handle(event, guild);
+
+        verify(manager).stop();
+        verify(event.getJDA().getDirectAudioController()).disconnect(guild);
+    }
+
+    @Test
     void handle_disconnectsRemovesManagerAndReplies() {
         long guildId = 42L;
+        when(registry.getIfPresent(guildId)).thenReturn(Optional.empty());
+
         SlashCommandInteractionEvent event = mock(SlashCommandInteractionEvent.class, Answers.RETURNS_DEEP_STUBS);
         Guild guild = mock(Guild.class, Answers.RETURNS_DEEP_STUBS);
         when(guild.getIdLong()).thenReturn(guildId);

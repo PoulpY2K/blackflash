@@ -17,9 +17,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import static fr.fumbus.blackflash.discord.slash.utils.SlashCommandConstants.COMMAND_PLAY;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-@SuppressWarnings("DataFlowIssue")
+@SuppressWarnings({"DataFlowIssue", "unchecked"})
 @ExtendWith(MockitoExtension.class)
 class SlashPlayCommandHandlerTests {
 
@@ -64,10 +65,20 @@ class SlashPlayCommandHandlerTests {
         when(guild.getSelfMember().getVoiceState().inAudioChannel()).thenReturn(true);
         when(event.getOption("query").getAsString()).thenReturn("ytsearch:test");
 
+        // Invoke the queue consumer so that loadTrack.run() fires during handle()
+        var deferReplyAction = event.deferReply(false);
+        doAnswer(inv -> {
+            ((java.util.function.Consumer<Object>) inv.getArgument(0)).accept(null);
+            return null;
+        }).when(deferReplyAction).queue(any());
+
+        // Reset invocation counter so the setup call above doesn't count
+        clearInvocations(event);
+
         handler.handle(event, guild);
 
         verify(event).deferReply(false);
-        verify(slashJoinCommandHandler, never()).joinChannel(event);
+        verifyNoInteractions(slashJoinCommandHandler);
         verify(lavalink).getOrCreateLink(guildId);
         verify(lavalink.getOrCreateLink(guildId)).loadItem("ytsearch:test");
     }
@@ -84,9 +95,16 @@ class SlashPlayCommandHandlerTests {
         // bot not in voice (default for deep stub)
         when(event.getOption("query").getAsString()).thenReturn("ytsearch:test");
 
+        // Invoke the onSuccess runnable so that loadTrack.run() fires during handle()
+        doAnswer(inv -> {
+            Runnable onSuccess = inv.getArgument(1);
+            onSuccess.run();
+            return true;
+        }).when(slashJoinCommandHandler).joinChannel(eq(event), any(Runnable.class));
+
         handler.handle(event, guild);
 
-        verify(slashJoinCommandHandler).joinChannel(event);
+        verify(slashJoinCommandHandler).joinChannel(eq(event), any(Runnable.class));
         verify(event, never()).deferReply(anyBoolean());
         verify(lavalink.getOrCreateLink(guildId)).loadItem("ytsearch:test");
     }

@@ -35,7 +35,12 @@ public class SlashStopCommandHandler implements SlashCommandHandler {
 
     @Override
     public void handle(SlashCommandInteractionEvent event, Guild guild) {
-        registry.getOrCreate(guild.getIdLong()).stop();
+        var managerOpt = registry.getIfPresent(guild.getIdLong());
+        if (managerOpt.isEmpty()) {
+            event.replyEmbeds(BotEmbeds.nothingPlaying()).setEphemeral(true).queue();
+            return;
+        }
+        managerOpt.get().stop();
         event.replyEmbeds(BotEmbeds.stopped()).queue();
     }
 }

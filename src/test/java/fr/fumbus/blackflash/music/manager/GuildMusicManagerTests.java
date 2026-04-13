@@ -3,7 +3,6 @@ package fr.fumbus.blackflash.music.manager;
 import dev.arbjerg.lavalink.client.LavalinkClient;
 import dev.arbjerg.lavalink.client.Link;
 import dev.arbjerg.lavalink.client.player.LavalinkPlayer;
-import dev.arbjerg.lavalink.client.player.Track;
 import fr.fumbus.blackflash.music.player.TrackScheduler;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -64,13 +63,12 @@ class GuildMusicManagerTests {
         when(link.getCachedPlayer()).thenReturn(player);
         when(lavalinkClient.getLinkIfCached(123L)).thenReturn(link);
 
-        TrackScheduler scheduler = new TrackScheduler(null);
-        scheduler.queue.offer(mock(Track.class));
+        TrackScheduler scheduler = mock(TrackScheduler.class);
         GuildMusicManager manager = new GuildMusicManager(scheduler, 123L, lavalinkClient);
 
         manager.stop();
 
-        assertThat(scheduler.queue).isEmpty();
+        verify(scheduler).clearQueue();
         verify(player).setPaused(false);
     }
 
@@ -78,13 +76,12 @@ class GuildMusicManagerTests {
     void stop_clearsQueueAndDoesNotThrowWhenNoPlayerIsCached() {
         when(lavalinkClient.getLinkIfCached(123L)).thenReturn(null);
 
-        TrackScheduler scheduler = new TrackScheduler(null);
-        scheduler.queue.offer(mock(Track.class));
+        TrackScheduler scheduler = mock(TrackScheduler.class);
         GuildMusicManager manager = new GuildMusicManager(scheduler, 123L, lavalinkClient);
 
         manager.stop();
 
-        assertThat(scheduler.queue).isEmpty();
+        verify(scheduler).clearQueue();
     }
 }
 

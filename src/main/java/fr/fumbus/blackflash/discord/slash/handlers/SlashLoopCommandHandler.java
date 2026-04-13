@@ -36,7 +36,12 @@ public class SlashLoopCommandHandler implements SlashCommandHandler {
 
     @Override
     public void handle(SlashCommandInteractionEvent event, Guild guild) {
-        final var scheduler = registry.getOrCreate(guild.getIdLong()).getTrackScheduler();
+        var managerOpt = registry.getIfPresent(guild.getIdLong());
+        if (managerOpt.isEmpty()) {
+            event.replyEmbeds(BotEmbeds.nothingPlaying()).setEphemeral(true).queue();
+            return;
+        }
+        final var scheduler = managerOpt.get().getTrackScheduler();
         final LoopMode newMode = scheduler.getLoopMode().next();
         scheduler.setLoopMode(newMode);
         event.replyEmbeds(BotEmbeds.loopMode(newMode)).queue();

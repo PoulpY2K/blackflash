@@ -31,7 +31,8 @@ import static java.util.Objects.nonNull;
 @RequiredArgsConstructor
 public class TrackScheduler {
 
-    public final Queue<Track> queue = new ConcurrentLinkedDeque<>();
+    /** Package-private — accessible to same-package tests; use {@link #getQueueSize()} from other packages. */
+    final Queue<Track> queue = new ConcurrentLinkedDeque<>();
     private final GuildMusicManager guildMusicManager;
 
     @Getter
@@ -40,6 +41,10 @@ public class TrackScheduler {
 
     private static boolean isFirstTrackSameAsPlayed(Track currentTrack, List<Track> tracks) {
         return tracks.size() > 1 && tracks.getFirst().getEncoded().equals(currentTrack.getEncoded());
+    }
+
+    public int getQueueSize() {
+        return queue.size();
     }
 
     @Synchronized
@@ -130,7 +135,6 @@ public class TrackScheduler {
                 link -> link.createOrUpdatePlayer()
                         .setTrack(track)
                         .setVolume(50)
-                        .setEndTime(track.getInfo().getLength())
                         .subscribe()
         );
     }

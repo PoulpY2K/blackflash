@@ -212,15 +212,14 @@ class SlashCommandListenerTests {
     void onSlashCommandInteraction_unknownCommand_repliesWithEphemeralUnknownMessage() {
         listener = listenerWithNoHandlers();
         listener.init();
-        // Don't use mockGuildSlashEvent here: the voice-state stub is never reached
-        // because the unknown-command guard fires before the member check.
         SlashCommandInteractionEvent event = mock(SlashCommandInteractionEvent.class, Answers.RETURNS_DEEP_STUBS);
         when(event.getFullCommandName()).thenReturn("nonexistent");
 
         listener.onSlashCommandInteraction(event);
 
-        verify(event).reply("Unknown command!");
-        verify(event.reply("Unknown command!")).setEphemeral(true);
+        ArgumentCaptor<MessageEmbed> embedCaptor = ArgumentCaptor.forClass(MessageEmbed.class);
+        verify(event).replyEmbeds(embedCaptor.capture());
+        verify(event.replyEmbeds(embedCaptor.getValue())).setEphemeral(true);
     }
 
     @Test

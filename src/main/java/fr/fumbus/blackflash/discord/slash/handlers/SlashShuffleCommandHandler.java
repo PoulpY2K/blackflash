@@ -30,7 +30,7 @@ public class SlashShuffleCommandHandler implements SlashCommandHandler {
     private final GuildMusicManagerRegistry registry;
 
     private static boolean queueHasOneOrLessTrack(TrackScheduler scheduler) {
-        return scheduler.queue.size() <= 1;
+        return scheduler.getQueueSize() <= 1;
     }
 
     @Override

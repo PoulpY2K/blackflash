@@ -1,6 +1,5 @@
 package fr.fumbus.blackflash.discord.slash.handlers;
 
-import dev.arbjerg.lavalink.client.player.Track;
 import fr.fumbus.blackflash.music.manager.GuildMusicManager;
 import fr.fumbus.blackflash.music.manager.GuildMusicManagerRegistry;
 import fr.fumbus.blackflash.music.player.TrackScheduler;
@@ -66,8 +65,7 @@ class SlashShuffleCommandHandlerTests {
         GuildMusicManager musicManager = mock(GuildMusicManager.class);
         TrackScheduler scheduler = spy(new TrackScheduler(musicManager));
         doNothing().when(scheduler).shuffle();
-        scheduler.queue.offer(mock(Track.class));
-        scheduler.queue.offer(mock(Track.class));
+        doReturn(2).when(scheduler).getQueueSize(); // simulate 2 tracks in the queue
         GuildMusicManager manager = mock(GuildMusicManager.class);
         when(manager.getTrackScheduler()).thenReturn(scheduler);
         when(registry.getOrCreate(guildId)).thenReturn(manager);

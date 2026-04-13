@@ -183,6 +183,22 @@ public class BotEmbeds {
     }
 
     /**
+     * Command requires something to be playing, but nothing is.
+     */
+    public static MessageEmbed nothingPlaying() {
+        return base(COLOR_WARNING)
+                .setDescription("⚠️ Nothing is currently playing!")
+                .build();
+    }
+
+    /** The dispatched command name did not match any registered handler. */
+    public static MessageEmbed unknownCommand() {
+        return base(COLOR_ERROR)
+                .setDescription("❌ Unknown command!")
+                .build();
+    }
+
+    /**
      * Member tried to use a music command while not in a voice channel.
      */
     public static MessageEmbed memberNotInVoiceChannel() {

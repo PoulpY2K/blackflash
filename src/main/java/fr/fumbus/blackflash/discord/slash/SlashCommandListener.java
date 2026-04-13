@@ -104,7 +104,7 @@ public class SlashCommandListener extends ListenerAdapter {
 
         if (isNull(handler)) {
             log.warn("Received an unknown slash command interaction: {}", commandName);
-            event.reply("Unknown command!").setEphemeral(true).queue();
+            event.replyEmbeds(BotEmbeds.unknownCommand()).setEphemeral(true).queue();
             return;
         } else if (handler.requiresMemberInVoiceChannel() && checkIfMemberNotInVoiceChannel(member)) {
             event.replyEmbeds(BotEmbeds.memberNotInVoiceChannel()).setEphemeral(true).queue();

@@ -52,19 +52,20 @@ public class SlashPlayCommandHandler implements SlashCommandHandler {
 
     @Override
     public void handle(SlashCommandInteractionEvent event, Guild guild) {
-        if (SlashCommandUtils.isBotInVoiceChannel(guild)) {
-            event.deferReply(false).queue();
-        } else {
-            slashJoinCommandHandler.joinChannel(event);
-        }
-
         final String query = Optional.ofNullable(event.getOption("query"))
                 .map(OptionMapping::getAsString)
                 .orElse("");
         final long guildId = guild.getIdLong();
-        lavalink.getOrCreateLink(guildId)
+        final Runnable loadTrack = () -> lavalink
+                .getOrCreateLink(guildId)
                 .loadItem(query)
                 .subscribe(new AudioLoader(event, registry.getOrCreate(guildId)));
+
+        if (SlashCommandUtils.isBotInVoiceChannel(guild)) {
+            event.deferReply(false).queue(hook -> loadTrack.run());
+        } else {
+            slashJoinCommandHandler.joinChannel(event, loadTrack);
+        }
     }
 }
 

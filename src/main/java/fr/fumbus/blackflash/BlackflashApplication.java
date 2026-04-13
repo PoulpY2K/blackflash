@@ -14,7 +14,7 @@ import java.util.TimeZone;
 @SpringBootApplication(exclude = {UserDetailsServiceAutoConfiguration.class, DataSourceAutoConfiguration.class})
 public class BlackflashApplication {
 
-    static void main(String[] args) {
+    public static void main(String[] args) {
         TimeZone.setDefault(TimeZone.getTimeZone("Europe/Paris"));
         SpringApplication.run(BlackflashApplication.class, args);
     }

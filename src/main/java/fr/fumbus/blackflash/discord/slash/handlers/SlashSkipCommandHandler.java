@@ -35,7 +35,12 @@ public class SlashSkipCommandHandler implements SlashCommandHandler {
 
     @Override
     public void handle(SlashCommandInteractionEvent event, Guild guild) {
-        registry.getOrCreate(guild.getIdLong()).getTrackScheduler().skip();
+        var managerOpt = registry.getIfPresent(guild.getIdLong());
+        if (managerOpt.isEmpty()) {
+            event.replyEmbeds(BotEmbeds.nothingPlaying()).setEphemeral(true).queue();
+            return;
+        }
+        managerOpt.get().getTrackScheduler().skip();
         event.replyEmbeds(BotEmbeds.skipped()).queue();
     }
 }
