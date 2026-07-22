@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.5</version>
+        <version>4.1.0</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>fr.fumbus</groupId>
@@ -40,7 +40,7 @@
         <java.version>25</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.build.outputEncoding>UTF-8</project.build.outputEncoding>
-        <spring-cloud.version>2025.1.1</spring-cloud.version>
+        <spring-cloud.version>2025.1.2</spring-cloud.version>
         <java.code.base-package>fr.fumbus.blackflash</java.code.base-package>
 
         <!-- Sonar -->
@@ -51,15 +51,15 @@
         <sonar.projectKey>poulpy2k_blackflash</sonar.projectKey>
 
         <!-- Plugins -->
-        <jacoco-maven-plugin.version>0.8.14</jacoco-maven-plugin.version>
+        <jacoco-maven-plugin.version>0.8.15</jacoco-maven-plugin.version>
         <lombok-mapstruct-binding.version>0.2.0</lombok-mapstruct-binding.version>
-        <sonar-maven-plugin.version>5.5.0.6356</sonar-maven-plugin.version>
+        <sonar-maven-plugin.version>5.7.0.6970</sonar-maven-plugin.version>
 
         <!-- Dependencies -->
         <mapstruct.version>1.6.3</mapstruct.version>
         <commons-lang3.version>3.20.0</commons-lang3.version>
-        <openapi-generator-maven-plugin.version>7.21.0</openapi-generator-maven-plugin.version>
-        <jda.version>6.4.1</jda.version>
+        <openapi-generator-maven-plugin.version>7.24.0</openapi-generator-maven-plugin.version>
+        <jda.version>6.5.0</jda.version>
         <lavalink-client.version>3.4.0</lavalink-client.version>
         <jdave-api.version>0.1.8</jdave-api.version>
     </properties>
